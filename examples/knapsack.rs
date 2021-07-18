@@ -1,14 +1,13 @@
-use rand::{thread_rng, Rng};
-
 use optima_rust::{
     algorithms::{OptAlghorithm, SimmulatedAnnealing},
-    base::{
-        Constraint, Criterion, Objective, Solution, SolutionInfo, State, StateChanger,
-        WeightedConstraints, WeightedObjectives,
-    },
+    base::{Solution, SolutionInfo, State, StateChanger},
+    constraints::{Constraint, WeightedConstraints},
     coolers::QuadriaticCooler,
+    criterion::Criterion,
+    objectives::{Objective, WeightedObjectives},
     stop::NotGettingBetter,
 };
+use rand::{thread_rng, Rng};
 
 #[derive(Debug, Clone)]
 struct KnapsackState {
