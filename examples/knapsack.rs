@@ -1,5 +1,6 @@
 use optima_rust::{
-    algorithms::{OptAlghorithm, SimmulatedAnnealing},
+    algorithms::OptAlghorithm,
+    annealing::SimmulatedAnnealing,
     base::{Solution, SolutionInfo, State, StateChanger},
     constraints::{Constraint, WeightedConstraints},
     coolers::QuadriaticCooler,
@@ -51,8 +52,8 @@ impl KnapsackSolution {
 impl Solution for KnapsackSolution {
     fn reset(&mut self) {
         self.set_info(f64::NAN, false, true);
-        self.replace_before();
-        self.replace_best();
+        self.update_before();
+        self.update_best();
     }
 
     fn get_info(&self, state: State) -> &SolutionInfo {
@@ -70,15 +71,15 @@ impl Solution for KnapsackSolution {
     }
 
     //TODO: do not copy
-    fn replace_best(&mut self) {
+    fn update_best(&mut self) {
         self.best_state = self.current_state.clone();
     }
 
-    fn replace_current(&mut self) {
+    fn update_current(&mut self) {
         self.current_state = self.before_state.clone();
     }
 
-    fn replace_before(&mut self) {
+    fn update_before(&mut self) {
         self.before_state = self.current_state.clone();
     }
 }

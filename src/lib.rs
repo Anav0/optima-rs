@@ -1,4 +1,5 @@
 pub mod algorithms;
+pub mod annealing;
 pub mod base;
 pub mod constraints;
 pub mod coolers;

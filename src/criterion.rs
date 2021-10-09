@@ -33,8 +33,8 @@ where
 
     pub fn initial(&mut self, solution: &mut S) {
         self.evaluate(solution);
-        solution.replace_before();
-        solution.replace_best();
+        solution.update_before();
+        solution.update_best();
     }
 
     pub fn is_first_better(&mut self, solution: &mut S, first: State, second: State) -> bool {
