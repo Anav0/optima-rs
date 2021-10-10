@@ -14,7 +14,7 @@ pub trait Mutator<S: Speciment> {
 }
 
 pub struct GeneticAlgorithm<'a, S: Speciment> {
-    pub print_rate: u32,
+    pub print_rate: Option<u32>,
     is_minimalization: bool,
     crosser: &'a mut dyn Crosser<S>,
     mutator: &'a mut dyn Mutator<S>,
@@ -27,15 +27,19 @@ impl<'b, 'a, S: Speciment + Clone> GeneticAlgorithm<'a, S> {
         self
     }
 
+    pub fn print_cycles(mut self, print_rate: u32) -> Self {
+        self.print_rate = Some(print_rate);
+        self
+    }
+
     pub fn new(
-        print_rate: u32,
         crosser: &'a mut dyn Crosser<S>,
         mutator: &'a mut dyn Mutator<S>,
         evaluator: &'a mut dyn Evaluator<S>,
     ) -> Self {
         Self {
             is_minimalization: false,
-            print_rate,
+            print_rate: None,
             crosser,
             mutator,
             evaluator,
@@ -56,7 +60,7 @@ impl<'b, 'a, S: Speciment + Clone> GeneticAlgorithm<'a, S> {
             self.evaluator
                 .extract_best(&mut best, population, self.is_minimalization);
 
-            if i % self.print_rate == 0 {
+            if self.print_rate.is_some() && i % self.print_rate.unwrap() == 0 {
                 println!("Cycle {}", i);
             }
         }

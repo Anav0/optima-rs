@@ -1,19 +1,22 @@
+use std::iter::Cycle;
+
 use optima_rust::genetic::{Crosser, DefaultEvaluator, GeneticAlgorithm, Mutator, Speciment};
 use rand::{
     prelude::{SliceRandom, ThreadRng},
-    thread_rng, Fill, Rng,
+    thread_rng, Rng,
 };
 
 fn main() {
     let mut crosser = KnapsackCrosser::default();
     let mut mutator = KnapsackMutator::default();
     let mut evaluator = DefaultEvaluator::new(300);
-    let mut genetic = GeneticAlgorithm::new(100, &mut crosser, &mut mutator, &mut evaluator);
+    let mut genetic = GeneticAlgorithm::new(&mut crosser, &mut mutator, &mut evaluator);
 
     let population_size = 100;
-    let values = vec![5.0, 6.0, 12.0, 4.0, 3.5];
+    let values = vec![5.0, 6.0, 12.0, 4.0, 33.5];
     let weights = vec![2.0, 3.0, 1.0, 9.0, 20.0];
-    let capacity: f64 = 13.0;
+    let capacity: f64 = 23.0;
+    let cycles = 200;
     let mut population = Vec::with_capacity(population_size);
 
     let mut rng = thread_rng();
@@ -30,13 +33,19 @@ fn main() {
         ));
     }
 
-    let best = genetic.evolve(&mut population, 1000, 10);
+    let best = genetic.evolve(&mut population, cycles, 4);
 
+    println!("=======================================================");
+    println!("==== Knapsack problem solved via genetic algorithm ====");
+    println!("=======================================================");
     println!("Values: {:?}", values);
     println!("Weights: {:?}", weights);
-    println!("Best found solutions");
+    println!("Capacity: {:?}", capacity);
+    println!("Population size: {:?}", population_size);
+    println!("Cycles: {:?}", cycles);
+    println!("Best solutions:");
     for item in best {
-        println!("{:?} {}", item.picked_items, item.score());
+        println!("  {:?}, total value: {}", item.picked_items, item.score());
     }
 }
 
