@@ -4,5 +4,7 @@ pub mod base;
 pub mod constraints;
 pub mod coolers;
 pub mod criterion;
+mod evaluator;
+pub mod genetic;
 pub mod objectives;
 pub mod stop;
