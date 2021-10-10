@@ -104,7 +104,7 @@ impl<'a> Speciment for KnapsackSpeciment<'a> {
             }
         }
         if weight > *self.capacity {
-            (self.capacity - weight) * -1.0
+            self.capacity - weight
         } else {
             value
         }
