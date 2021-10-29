@@ -56,7 +56,8 @@ where
         change: &dyn Fn(&mut T),
     ) {
         //Initial evaluation
-        criterion.evaluate(solution);
+        let current = solution.get_state_mut(State::Current);
+        criterion.evaluate(current);
         solution.swap_info(State::BeforeChange, State::Current);
         solution.swap_info(State::Best, State::Current);
 
@@ -68,16 +69,17 @@ where
             //Save current state and then change and evaluate it
             solution.swap_info(State::BeforeChange, State::Current);
             solution.set_state_info(State::Current, f64::NAN, false, true);
-            change(solution.get_state_mut(State::Current));
-            criterion.evaluate(solution);
+            let current = solution.get_state_mut(State::Current);
+            change(current);
+            criterion.evaluate(current);
 
-            let current = solution.get_state_info_ref(State::Current);
-            let before = solution.get_state_info_ref(State::BeforeChange);
-            let best = solution.get_state_info_ref(State::Best);
-            if criterion.is_first_better(current, before)
-                || self.hot_enought_to_swap(current.value, before.value)
+            let current_info = solution.get_state_info_ref(State::Current);
+            let before_info = solution.get_state_info_ref(State::BeforeChange);
+            let best_info = solution.get_state_info_ref(State::Best);
+            if criterion.is_first_better(current_info, before_info)
+                || self.hot_enought_to_swap(current_info.value, before_info.value)
             {
-                if criterion.is_first_better(current, best) {
+                if criterion.is_first_better(current_info, best_info) {
                     solution.swap_info(State::Best, State::Current)
                 }
             } else {

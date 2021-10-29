@@ -67,6 +67,7 @@ fn main() {
 
     let mut criterion: Criterion<KnapsackState> =
         Criterion::new(value_closure, penalty_closure, false);
+
     let initial_state = KnapsackState::new(vec![true; values.len()]);
     let mut solution = Solution::new(initial_state);
 

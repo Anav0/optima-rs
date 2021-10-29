@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::base::{InfoHolder, Solution, SolutionInfo, State};
+use crate::base::{InfoHolder, SolutionInfo};
 
 pub struct Criterion<'a, T>
 where
@@ -40,25 +40,33 @@ where
             return false;
         }
 
+        // Lower penalty
+        if !second_info.is_feasible {
+            return first_info.value < second_info.value;
+        }
+
+        // Compare value accorting to problem type
         return match self.is_minimalization_problem {
             true => first_info.value < second_info.value,
             false => first_info.value > second_info.value,
         };
     }
 
-    pub fn evaluate(&self, solution: &mut Solution<T>) {
-        let holder = solution.get_state_mut(State::Current);
-        let info = holder.get_info();
+    pub fn evaluate(&self, state: &mut T) {
+        let info = state.get_info();
         let mut value: f64 = info.value;
         let mut is_feasible: bool = info.is_feasible;
         if info.check_penalty {
-            value = (self.penalty)(holder);
+            value = (self.penalty)(state);
         }
         is_feasible = value == 0.0;
         if is_feasible {
-            value = (self.value)(holder);
+            value = (self.value)(state);
         }
-        solution.set_state_info(State::Current, value, is_feasible, false);
+        let info = state.get_info_mut();
+        info.value = value;
+        info.is_feasible = is_feasible;
+        info.check_penalty = false;
     }
 }
 
@@ -92,14 +100,13 @@ mod tests {
             20.0
         }
         let criterion = Criterion::<TestState>::new(&penalty, &value, false);
-        let initial_state = TestState {
+        let mut initial_state = TestState {
             info: SolutionInfo::default(),
         };
-        let mut solution = Solution::new(initial_state);
 
-        criterion.evaluate(&mut solution);
+        criterion.evaluate(&mut initial_state);
 
-        let info = solution.get_state_info_ref(State::Current);
+        let info = initial_state.get_info();
 
         assert_eq!(10.0, info.value);
         assert_eq!(false, info.check_penalty);
@@ -116,13 +123,12 @@ mod tests {
             20.0
         }
         let criterion = Criterion::<TestState>::new(&penalty, &value, false);
-        let initial_state = TestState {
+        let mut initial_state = TestState {
             info: SolutionInfo::default(),
         };
-        let mut solution = Solution::new(initial_state);
 
-        criterion.evaluate(&mut solution);
-        let info = solution.get_state_info_ref(State::Current);
+        criterion.evaluate(&mut initial_state);
+        let info = initial_state.get_info();
 
         assert_eq!(20.0, info.value);
         assert_eq!(false, info.check_penalty);
@@ -139,18 +145,20 @@ mod tests {
             20.0
         }
         let criterion = Criterion::<TestState>::new(&penalty, &value, false);
-        let initial_state = TestState {
-            info: SolutionInfo::default(),
+        let mut initial_state = TestState {
+            info: SolutionInfo {
+                value: 10.0,
+                is_feasible: false,
+                check_penalty: true,
+            },
         };
-        let mut solution = Solution::new(initial_state);
-        solution.set_state_info(State::Current, 10.0, false, true);
 
-        criterion.evaluate(&mut solution);
-        let info = solution.get_state_info_ref(State::Current);
+        criterion.evaluate(&mut initial_state);
+        let mut info = initial_state.get_info_mut();
 
-        assert_eq!(10.0, info.value);
-        assert_eq!(false, info.check_penalty);
-        assert_eq!(false, info.is_feasible);
+        info.value = 10.0;
+        info.is_feasible = false;
+        info.check_penalty = false;
     }
 
     #[test]
@@ -186,7 +194,6 @@ mod tests {
         info_b.value = 20.0;
         assert_eq!(true, criterion.is_first_better(&info_a, &info_b));
     }
-
 
     #[test]
     fn is_first_better_take_feasibility_into_account() {
