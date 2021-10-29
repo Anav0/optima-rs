@@ -1,5 +1,5 @@
 use optima_rust::{
-    algorithms::OptAlghorithm,
+    algorithms::OptAlgorithm,
     annealing::{coolers::QuadriaticCooler, stop::NotGettingBetter, SimmulatedAnnealing},
     base::{InfoHolder, Solution, SolutionInfo, State},
     criterion::Criterion,

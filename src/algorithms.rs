@@ -3,7 +3,7 @@ use crate::{
     criterion::Criterion,
 };
 
-pub trait OptAlghorithm<'a, T>
+pub trait OptAlgorithm<'a, T>
 where
     T: Clone,
     T: InfoHolder,

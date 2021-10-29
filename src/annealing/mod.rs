@@ -3,7 +3,7 @@ use std::f64::consts::E;
 use rand::{prelude::ThreadRng, Rng};
 
 use crate::{
-    algorithms::OptAlghorithm,
+    algorithms::OptAlgorithm,
     base::{InfoHolder, Solution, State},
     criterion::Criterion,
 };
@@ -45,7 +45,7 @@ where
     }
 }
 
-impl<'a, T> OptAlghorithm<'a, T> for SimmulatedAnnealing<'a, T>
+impl<'a, T> OptAlgorithm<'a, T> for SimmulatedAnnealing<'a, T>
 where
     T: Clone,
     T: InfoHolder,
