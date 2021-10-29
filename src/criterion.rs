@@ -65,3 +65,95 @@ where
         solution.set_state_info(State::Current, value, is_feasible, false);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::base::{InfoHolder, Solution, SolutionInfo, State};
+
+    use super::Criterion;
+
+    #[derive(Clone)]
+    struct TestState {
+        info: SolutionInfo,
+    }
+    impl InfoHolder for TestState {
+        fn get_info(&self) -> &SolutionInfo {
+            &self.info
+        }
+
+        fn get_info_mut(&mut self) -> &mut SolutionInfo {
+            &mut self.info
+        }
+    }
+
+    #[test]
+    fn evaluate_penalty() {
+        fn penalty<T>(_: &T) -> f64 {
+            10.0
+        }
+
+        fn value<T>(_: &T) -> f64 {
+            20.0
+        }
+        let criterion = Criterion::<TestState>::new(&penalty, &value, false);
+        let initial_state = TestState {
+            info: SolutionInfo::default(),
+        };
+        let mut solution = Solution::new(initial_state);
+
+        criterion.evaluate(&mut solution);
+
+        let info = solution.get_state_info_ref(State::Current);
+
+        assert_eq!(10.0, info.value);
+        assert_eq!(false, info.check_penalty);
+        assert_eq!(false, info.is_feasible);
+    }
+
+    #[test]
+    fn evaluate_value() {
+        fn penalty<T>(_: &T) -> f64 {
+            0.0
+        }
+
+        fn value<T>(_: &T) -> f64 {
+            20.0
+        }
+        let criterion = Criterion::<TestState>::new(&penalty, &value, false);
+        let initial_state = TestState {
+            info: SolutionInfo::default(),
+        };
+        let mut solution = Solution::new(initial_state);
+
+        criterion.evaluate(&mut solution);
+        let info = solution.get_state_info_ref(State::Current);
+
+        assert_eq!(20.0, info.value);
+        assert_eq!(false, info.check_penalty);
+        assert_eq!(true, info.is_feasible);
+    }
+
+    #[test]
+    fn evaluate_weird_solution() {
+        fn penalty<T>(_: &T) -> f64 {
+            10.0
+        }
+
+        fn value<T>(_: &T) -> f64 {
+            20.0
+        }
+        let criterion = Criterion::<TestState>::new(&penalty, &value, false);
+        let initial_state = TestState {
+            info: SolutionInfo::default(),
+        };
+        let mut solution = Solution::new(initial_state);
+        solution.set_state_info(State::Current, 10.0, false, true);
+
+        criterion.evaluate(&mut solution);
+        let info = solution.get_state_info_ref(State::Current);
+
+        assert_eq!(10.0, info.value);
+        assert_eq!(false, info.check_penalty);
+        assert_eq!(false, info.is_feasible);
+    }
+}
