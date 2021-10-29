@@ -31,11 +31,7 @@ where
         }
     }
 
-    pub fn is_first_better(
-        &mut self,
-        first_info: &SolutionInfo,
-        second_info: &SolutionInfo,
-    ) -> bool {
+    pub fn is_first_better(&self, first_info: &SolutionInfo, second_info: &SolutionInfo) -> bool {
         if first_info.is_feasible && !second_info.is_feasible {
             return true;
         };
@@ -87,7 +83,7 @@ mod tests {
     }
 
     #[test]
-    fn evaluate_penalty() {
+    fn evaluate_penalty_evaluated_correctly() {
         fn penalty<T>(_: &T) -> f64 {
             10.0
         }
@@ -111,7 +107,7 @@ mod tests {
     }
 
     #[test]
-    fn evaluate_value() {
+    fn evaluate_value_evaluated_correctly() {
         fn penalty<T>(_: &T) -> f64 {
             0.0
         }
@@ -155,5 +151,68 @@ mod tests {
         assert_eq!(10.0, info.value);
         assert_eq!(false, info.check_penalty);
         assert_eq!(false, info.is_feasible);
+    }
+
+    #[test]
+    fn is_first_better_value_comparison() {
+        fn penalty<T>(_: &T) -> f64 {
+            10.0
+        }
+
+        fn value<T>(_: &T) -> f64 {
+            20.0
+        }
+        let mut criterion = Criterion::<TestState>::new(&penalty, &value, false);
+        let mut info_a = SolutionInfo {
+            value: 10.0,
+            check_penalty: false,
+            is_feasible: true,
+        };
+        let mut info_b = SolutionInfo {
+            value: 20.0,
+            check_penalty: false,
+            is_feasible: true,
+        };
+
+        assert_eq!(false, criterion.is_first_better(&info_a, &info_b));
+        info_a.value = 20.0;
+        info_b.value = 10.0;
+        assert_eq!(true, criterion.is_first_better(&info_a, &info_b));
+
+        criterion.is_minimalization_problem = true;
+
+        assert_eq!(false, criterion.is_first_better(&info_a, &info_b));
+        info_a.value = 10.0;
+        info_b.value = 20.0;
+        assert_eq!(true, criterion.is_first_better(&info_a, &info_b));
+    }
+
+
+    #[test]
+    fn is_first_better_take_feasibility_into_account() {
+        fn penalty<T>(_: &T) -> f64 {
+            10.0
+        }
+
+        fn value<T>(_: &T) -> f64 {
+            20.0
+        }
+        let mut criterion = Criterion::<TestState>::new(&penalty, &value, false);
+
+        let info_a = SolutionInfo {
+            value: 30.0,
+            check_penalty: false,
+            is_feasible: true,
+        };
+
+        let info_b = SolutionInfo {
+            value: 2.0,
+            check_penalty: false,
+            is_feasible: false,
+        };
+
+        assert_eq!(true, criterion.is_first_better(&info_a, &info_b));
+        criterion.is_minimalization_problem = true;
+        assert_eq!(true, criterion.is_first_better(&info_a, &info_b));
     }
 }
