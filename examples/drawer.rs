@@ -1,4 +1,6 @@
-use optima_rust::genetic::{Crosser, DefaultEvaluator, GeneticAlgorithm, Mutator, Speciment};
+use optima_rust::genetic::{
+    evaluator::DefaultEvaluator, Crosser, GeneticAlgorithm, Mutator, Speciment,
+};
 use rand::prelude::*;
 use std::fs;
 

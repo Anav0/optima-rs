@@ -1,5 +1,6 @@
-pub use crate::evaluator::DefaultEvaluator;
-pub use crate::evaluator::Evaluator;
+use self::evaluator::Evaluator;
+
+pub mod evaluator;
 
 pub trait Speciment {
     fn score(&self) -> f64;

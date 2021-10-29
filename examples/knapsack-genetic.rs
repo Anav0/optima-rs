@@ -1,6 +1,6 @@
-use std::iter::Cycle;
-
-use optima_rust::genetic::{Crosser, DefaultEvaluator, GeneticAlgorithm, Mutator, Speciment};
+use optima_rust::genetic::{
+    evaluator::DefaultEvaluator, Crosser, GeneticAlgorithm, Mutator, Speciment,
+};
 use rand::{
     prelude::{SliceRandom, ThreadRng},
     thread_rng, Rng,
