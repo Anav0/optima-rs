@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use crate::criterion::Criterion;
+
 #[derive(Clone, Copy, Debug)]
 pub struct SolutionInfo {
     pub value: f64,
@@ -65,7 +67,13 @@ where
         tmp
     }
 
-    pub fn set_state_info(&mut self, state: State, value: f64, is_feasible: bool, check_penalty: bool) {
+    pub fn set_state_info(
+        &mut self,
+        state: State,
+        value: f64,
+        is_feasible: bool,
+        check_penalty: bool,
+    ) {
         let info = self.get_state_info_mut(state);
         info.value = value;
         info.is_feasible = is_feasible;
@@ -89,4 +97,17 @@ pub enum State {
     Best,
     Current,
     BeforeChange,
+}
+
+pub trait OptAlgorithm<'a, T>
+where
+    T: Clone,
+    T: InfoHolder,
+{
+    fn solve(
+        &mut self,
+        solution: &'a mut Solution<T>,
+        criterion: &mut Criterion<T>,
+        change: &dyn Fn(&mut T),
+    );
 }

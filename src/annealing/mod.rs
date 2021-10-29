@@ -3,8 +3,7 @@ use std::f64::consts::E;
 use rand::{prelude::ThreadRng, Rng};
 
 use crate::{
-    algorithms::OptAlgorithm,
-    base::{InfoHolder, Solution, State},
+    base::{InfoHolder, OptAlgorithm, Solution, State},
     criterion::Criterion,
 };
 
