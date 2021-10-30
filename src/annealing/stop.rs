@@ -1,5 +1,3 @@
-use crate::base::Solution;
-
 pub trait StopCriteria {
     fn should_stop(&mut self, value: f64) -> bool;
 }

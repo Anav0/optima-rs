@@ -54,7 +54,7 @@ fn main() {
     //BASIC PARAMETERS
     let weights = vec![1.0, 2.0, 3.0];
     let values = vec![4.0, 5.0, 1.0];
-    let capacity = 4.0; //Expect: 3
+    let capacity = 2.0;
 
     let mut stop_criteria = NotGettingBetter::new(500, 500, false);
     let mut cooler = QuadriaticCooler::new(800.0, 0.998);
