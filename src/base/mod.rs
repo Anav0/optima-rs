@@ -1,4 +1,5 @@
-use crate::criterion::Criterion;
+pub use self::criterion::Criterion;
+mod criterion;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Evaluation {

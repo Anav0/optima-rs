@@ -2,10 +2,7 @@ use std::f64::consts::E;
 
 use rand::{prelude::ThreadRng, Rng};
 
-use crate::{
-    base::{Evaluation, OptAlgorithm, Solution, State},
-    criterion::Criterion,
-};
+use crate::base::{Criterion, OptAlgorithm, Solution};
 
 use self::{coolers::Cooler, stop::StopCriteria};
 

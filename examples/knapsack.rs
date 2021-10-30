@@ -1,7 +1,6 @@
 use optima_rust::{
     annealing::{coolers::QuadriaticCooler, stop::NotGettingBetter, SimmulatedAnnealing},
-    base::{Evaluation, OptAlgorithm, Solution, State},
-    criterion::Criterion,
+    base::{Criterion, Evaluation, OptAlgorithm, Solution, State},
 };
 use rand::{thread_rng, Rng};
 
