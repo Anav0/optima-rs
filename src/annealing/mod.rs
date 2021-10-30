@@ -3,7 +3,7 @@ use std::f64::consts::E;
 use rand::{prelude::ThreadRng, Rng};
 
 use crate::{
-    base::{InfoHolder, OptAlgorithm, Solution, State},
+    base::{Evaluation, OptAlgorithm, Solution, State},
     criterion::Criterion,
 };
 
@@ -12,18 +12,14 @@ use self::{coolers::Cooler, stop::StopCriteria};
 pub mod coolers;
 pub mod stop;
 
-pub struct SimmulatedAnnealing<'a, T> {
-    stop_criteria: &'a mut dyn StopCriteria<T>,
+pub struct SimmulatedAnnealing<'a> {
+    stop_criteria: &'a mut dyn StopCriteria,
     cooler: &'a mut dyn Cooler,
     rnd: ThreadRng,
 }
 
-impl<'a, T> SimmulatedAnnealing<'a, T>
-where
-    T: Clone,
-    T: InfoHolder,
-{
-    pub fn new(stop_criteria: &'a mut dyn StopCriteria<T>, cooler: &'a mut dyn Cooler) -> Self {
+impl<'a> SimmulatedAnnealing<'a> {
+    pub fn new(stop_criteria: &'a mut dyn StopCriteria, cooler: &'a mut dyn Cooler) -> Self {
         Self {
             stop_criteria,
             cooler,
@@ -44,49 +40,43 @@ where
     }
 }
 
-impl<'a, T> OptAlgorithm<'a, T> for SimmulatedAnnealing<'a, T>
+impl<'a, S> OptAlgorithm<'a, S> for SimmulatedAnnealing<'a>
 where
-    T: Clone,
-    T: InfoHolder,
+    S: Solution + Clone,
 {
     fn solve(
         &mut self,
-        solution: &'a mut Solution<T>,
-        criterion: &mut Criterion<T>,
-        change: &dyn Fn(&mut T),
-    ) {
+        mut solution: S,
+        criterion: &mut Criterion<S>,
+        change: &dyn Fn(&mut S),
+    ) -> S {
         //Initial evaluation
-        let current = solution.get_state_mut(State::Current);
-        criterion.evaluate(current);
-        solution.swap_info(State::BeforeChange, State::Current);
-        solution.swap_info(State::Best, State::Current);
+        criterion.evaluate(&mut solution);
+        let mut best = solution.clone();
+        let mut before = solution.clone();
 
         //Main loop
-        while !self
-            .stop_criteria
-            .should_stop(solution.get_state_info_ref(State::Current).value)
-        {
+        while !self.stop_criteria.should_stop(solution.get_eval().value) {
             //Save current state and then change and evaluate it
-            solution.swap_info(State::BeforeChange, State::Current);
-            solution.set_state_info(State::Current, f64::NAN, false, true);
-            let current = solution.get_state_mut(State::Current);
-            change(current);
-            criterion.evaluate(current);
+            before = solution.clone();
+            change(&mut solution);
+            criterion.evaluate(&mut solution);
 
-            let current_info = solution.get_state_info_ref(State::Current);
-            let before_info = solution.get_state_info_ref(State::BeforeChange);
-            let best_info = solution.get_state_info_ref(State::Best);
-            if criterion.is_first_better(current_info, before_info)
-                || self.hot_enought_to_swap(current_info.value, before_info.value)
+            let current_eval = solution.get_eval();
+            let before_eval = before.get_eval();
+            let best_eval = best.get_eval();
+            if criterion.is_first_better(current_eval, before_eval)
+                || self.hot_enought_to_swap(current_eval.value, before_eval.value)
             {
-                if criterion.is_first_better(current_info, best_info) {
-                    solution.swap_info(State::Best, State::Current)
+                if criterion.is_first_better(current_eval, best_eval) {
+                    best = solution.clone()
                 }
             } else {
-                solution.swap_info(State::Current, State::BeforeChange)
+                solution = before.clone();
             }
 
             self.cooler.cool();
         }
+        best
     }
 }

@@ -1,184 +1,167 @@
-use std::marker::PhantomData;
+use crate::base::{Evaluation, Solution};
 
-use crate::base::{InfoHolder, SolutionInfo};
-
-pub struct Criterion<'a, T>
+pub struct Criterion<'a, S>
 where
-    T: Clone,
-    T: InfoHolder,
+    S: Solution,
 {
-    penalty: &'a dyn Fn(&T) -> f64,
-    value: &'a dyn Fn(&T) -> f64,
+    penalty: &'a dyn Fn(&S) -> f64,
+    value: &'a dyn Fn(&S) -> f64,
     is_minimalization_problem: bool,
-    phantom: PhantomData<T>,
 }
 
-impl<'a, T> Criterion<'a, T>
+impl<'a, S> Criterion<'a, S>
 where
-    T: Clone,
-    T: InfoHolder,
+    S: Solution,
 {
     pub fn new(
-        penalty: &'a dyn Fn(&T) -> f64,
-        value: &'a dyn Fn(&T) -> f64,
+        penalty: &'a dyn Fn(&S) -> f64,
+        value: &'a dyn Fn(&S) -> f64,
         is_minimalization_problem: bool,
     ) -> Self {
         Self {
             penalty,
             value,
             is_minimalization_problem,
-            phantom: PhantomData,
         }
     }
 
-    pub fn is_first_better(&self, first_info: &SolutionInfo, second_info: &SolutionInfo) -> bool {
-        if first_info.is_feasible && !second_info.is_feasible {
+    pub fn is_first_better(&self, first: &Evaluation, second: &Evaluation) -> bool {
+        if first.is_feasible && !second.is_feasible {
             return true;
         };
 
-        if !first_info.is_feasible && second_info.is_feasible {
+        if !first.is_feasible && second.is_feasible {
             return false;
         }
 
         // Lower penalty
-        if !second_info.is_feasible {
-            return first_info.value < second_info.value;
+        if !second.is_feasible {
+            return first.value < second.value;
         }
 
         // Compare value accorting to problem type
         return match self.is_minimalization_problem {
-            true => first_info.value < second_info.value,
-            false => first_info.value > second_info.value,
+            true => first.value < second.value,
+            false => first.value > second.value,
         };
     }
 
-    pub fn evaluate(&self, state: &mut T) {
-        let info = state.get_info();
-        let mut value: f64 = info.value;
-        let mut is_feasible: bool = info.is_feasible;
-        if info.check_penalty {
-            value = (self.penalty)(state);
-        }
-        is_feasible = value == 0.0;
+    pub fn evaluate(&self, solution: &mut S) {
+        let mut value = (self.penalty)(solution);
+        let is_feasible = value == 0.0;
         if is_feasible {
-            value = (self.value)(state);
+            value = (self.value)(solution);
         }
-        let info = state.get_info_mut();
-        info.value = value;
-        info.is_feasible = is_feasible;
-        info.check_penalty = false;
+
+        let mut eval = solution.get_eval_mut();
+        eval.value = value;
+        eval.is_feasible = is_feasible;
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::base::{InfoHolder, Solution, SolutionInfo, State};
+    use crate::base::{Evaluation, Solution};
 
     use super::Criterion;
 
     #[derive(Clone)]
-    struct TestState {
-        info: SolutionInfo,
+    struct TestSolution {
+        eval: Evaluation,
     }
-    impl InfoHolder for TestState {
-        fn get_info(&self) -> &SolutionInfo {
-            &self.info
+    impl Solution for TestSolution {
+        fn get_eval(&self) -> &Evaluation {
+            &self.eval
         }
 
-        fn get_info_mut(&mut self) -> &mut SolutionInfo {
-            &mut self.info
+        fn get_eval_mut(&mut self) -> &mut Evaluation {
+            &mut self.eval
         }
     }
 
     #[test]
     fn evaluate_penalty_evaluated_correctly() {
-        fn penalty<T>(_: &T) -> f64 {
+        fn penalty(_: &TestSolution) -> f64 {
             10.0
         }
 
-        fn value<T>(_: &T) -> f64 {
+        fn value(_: &TestSolution) -> f64 {
             20.0
         }
-        let criterion = Criterion::<TestState>::new(&penalty, &value, false);
-        let mut initial_state = TestState {
-            info: SolutionInfo::default(),
+        let criterion = Criterion::new(&penalty, &value, false);
+        let mut initial_state = TestSolution {
+            eval: Evaluation::default(),
         };
 
         criterion.evaluate(&mut initial_state);
 
-        let info = initial_state.get_info();
+        let info = initial_state.get_eval();
 
         assert_eq!(10.0, info.value);
-        assert_eq!(false, info.check_penalty);
         assert_eq!(false, info.is_feasible);
     }
 
     #[test]
     fn evaluate_value_evaluated_correctly() {
-        fn penalty<T>(_: &T) -> f64 {
+        fn penalty(_: &TestSolution) -> f64 {
             0.0
         }
 
-        fn value<T>(_: &T) -> f64 {
+        fn value(_: &TestSolution) -> f64 {
             20.0
         }
-        let criterion = Criterion::<TestState>::new(&penalty, &value, false);
-        let mut initial_state = TestState {
-            info: SolutionInfo::default(),
+        let criterion = Criterion::<TestSolution>::new(&penalty, &value, false);
+        let mut initial_state = TestSolution {
+            eval: Evaluation::default(),
         };
 
         criterion.evaluate(&mut initial_state);
-        let info = initial_state.get_info();
+        let info = initial_state.get_eval();
 
         assert_eq!(20.0, info.value);
-        assert_eq!(false, info.check_penalty);
         assert_eq!(true, info.is_feasible);
     }
 
     #[test]
     fn evaluate_weird_solution() {
-        fn penalty<T>(_: &T) -> f64 {
+        fn penalty(_: &TestSolution) -> f64 {
             10.0
         }
 
-        fn value<T>(_: &T) -> f64 {
+        fn value(_: &TestSolution) -> f64 {
             20.0
         }
-        let criterion = Criterion::<TestState>::new(&penalty, &value, false);
-        let mut initial_state = TestState {
-            info: SolutionInfo {
+        let criterion = Criterion::<TestSolution>::new(&penalty, &value, false);
+        let mut initial_state = TestSolution {
+            eval: Evaluation {
                 value: 10.0,
                 is_feasible: false,
-                check_penalty: true,
             },
         };
 
         criterion.evaluate(&mut initial_state);
-        let mut info = initial_state.get_info_mut();
+        let mut info = initial_state.get_eval_mut();
 
         info.value = 10.0;
         info.is_feasible = false;
-        info.check_penalty = false;
     }
 
     #[test]
     fn is_first_better_value_comparison() {
-        fn penalty<T>(_: &T) -> f64 {
+        fn penalty(_: &TestSolution) -> f64 {
             10.0
         }
 
-        fn value<T>(_: &T) -> f64 {
+        fn value(_: &TestSolution) -> f64 {
             20.0
         }
-        let mut criterion = Criterion::<TestState>::new(&penalty, &value, false);
-        let mut info_a = SolutionInfo {
+        let mut criterion = Criterion::<TestSolution>::new(&penalty, &value, false);
+        let mut info_a = Evaluation {
             value: 10.0,
-            check_penalty: false,
             is_feasible: true,
         };
-        let mut info_b = SolutionInfo {
+        let mut info_b = Evaluation {
             value: 20.0,
-            check_penalty: false,
             is_feasible: true,
         };
 
@@ -204,17 +187,15 @@ mod tests {
         fn value<T>(_: &T) -> f64 {
             20.0
         }
-        let mut criterion = Criterion::<TestState>::new(&penalty, &value, false);
+        let mut criterion = Criterion::<TestSolution>::new(&penalty, &value, false);
 
-        let info_a = SolutionInfo {
+        let info_a = Evaluation {
             value: 30.0,
-            check_penalty: false,
             is_feasible: true,
         };
 
-        let info_b = SolutionInfo {
+        let info_b = Evaluation {
             value: 2.0,
-            check_penalty: false,
             is_feasible: false,
         };
 

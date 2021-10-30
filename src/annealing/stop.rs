@@ -1,6 +1,6 @@
-use crate::base::InfoHolder;
+use crate::base::Solution;
 
-pub trait StopCriteria<T> {
+pub trait StopCriteria {
     fn should_stop(&mut self, value: f64) -> bool;
 }
 
@@ -28,11 +28,7 @@ impl NotGettingBetter {
         }
     }
 }
-impl<T> StopCriteria<T> for NotGettingBetter
-where
-    T: Clone,
-    T: InfoHolder,
-{
+impl StopCriteria for NotGettingBetter {
     fn should_stop(&mut self, value: f64) -> bool {
         self.steps += 1;
         if self.steps > self.max_steps {
