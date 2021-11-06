@@ -16,6 +16,14 @@ impl Default for Evaluation {
     }
 }
 
+pub trait OptAlgorithm<'a, S>
+where
+    S: Solution,
+    S: Clone,
+{
+    fn solve(&mut self, criterion: &mut Criterion<S>) -> S;
+}
+
 pub trait Solution {
     fn get_eval(&self) -> &Evaluation;
     fn get_eval_mut(&mut self) -> &mut Evaluation;
@@ -26,12 +34,4 @@ pub enum State {
     Best,
     Current,
     BeforeChange,
-}
-
-pub trait OptAlgorithm<'a, S>
-where
-    S: Solution,
-    S: Clone,
-{
-    fn solve(&mut self, solution: S, criterion: &mut Criterion<S>, change: &dyn Fn(&mut S)) -> S;
 }

@@ -1,29 +1,41 @@
-use std::f64::consts::E;
-
-use rand::{prelude::ThreadRng, Rng};
-
-use crate::base::{Criterion, OptAlgorithm, Solution};
-
 use self::{coolers::Cooler, stop::StopCriteria};
+use crate::base::{Criterion, OptAlgorithm, Solution};
+use rand::{prelude::ThreadRng, Rng};
+use std::f64::consts::E;
 
 pub mod coolers;
 pub mod stop;
 
-pub struct SimmulatedAnnealing<'a> {
+pub struct SimulatedAnnealing<'a, S> {
+    pub solution: S,
     stop_criteria: &'a mut dyn StopCriteria,
     cooler: &'a mut dyn Cooler,
-    rnd: ThreadRng,
+    change: &'a dyn Fn(&mut Self),
 }
 
-impl<'a> SimmulatedAnnealing<'a> {
-    pub fn new(stop_criteria: &'a mut dyn StopCriteria, cooler: &'a mut dyn Cooler) -> Self {
+impl<'a, S> SimulatedAnnealing<'a, S>
+where
+    S: Solution + Clone,
+{
+    pub fn new(
+        solution: S,
+        stop_criteria: &'a mut dyn StopCriteria,
+        cooler: &'a mut dyn Cooler,
+        change_sol: &'a dyn Fn(&mut Self),
+    ) -> Self {
         Self {
             stop_criteria,
             cooler,
-            rnd: rand::thread_rng(),
+            solution,
+            change: change_sol,
         }
     }
-    fn hot_enought_to_swap(&mut self, current_value: f64, before_move: f64) -> bool {
+    fn hot_enough_to_swap(
+        &self,
+        rnd: &mut ThreadRng,
+        current_value: f64,
+        before_move: f64,
+    ) -> bool {
         let diff = current_value - before_move;
         if diff == 0.0 {
             return false;
@@ -33,43 +45,45 @@ impl<'a> SimmulatedAnnealing<'a> {
             return true;
         }
 
-        return self.rnd.gen::<f64>() < E.powf(diff / self.cooler.get_temp());
+        return rnd.gen::<f64>() < E.powf(diff / self.cooler.get_temp());
     }
 }
 
-impl<'a, S> OptAlgorithm<'a, S> for SimmulatedAnnealing<'a>
+impl<'a, S> OptAlgorithm<'a, S> for SimulatedAnnealing<'a, S>
 where
     S: Solution + Clone,
 {
-    fn solve(
-        &mut self,
-        mut solution: S,
-        criterion: &mut Criterion<S>,
-        change: &dyn Fn(&mut S),
-    ) -> S {
+    fn solve(&mut self, criterion: &mut Criterion<S>) -> S {
+        let mut rnd = rand::thread_rng();
         //Initial evaluation
-        criterion.evaluate(&mut solution);
-        let mut best = solution.clone();
-        let mut before = solution.clone();
+        criterion.evaluate(&mut self.solution);
+        let mut best = self.solution.clone();
+
+        let change = self.change; //INFO: just for clarity
 
         //Main loop
-        while !self.stop_criteria.should_stop(solution.get_eval().value) {
+        while !self
+            .stop_criteria
+            .should_stop(self.solution.get_eval().value)
+        {
             //Save current state and then change and evaluate it
-            before = solution.clone();
-            change(&mut solution);
-            criterion.evaluate(&mut solution);
+            let before = self.solution.clone();
+            (change)(self);
+            criterion.evaluate(&mut self.solution);
 
-            let current_eval = solution.get_eval();
-            let before_eval = before.get_eval();
             let best_eval = best.get_eval();
-            if criterion.is_first_better(current_eval, before_eval)
-                || self.hot_enought_to_swap(current_eval.value, before_eval.value)
+            if criterion.is_first_better(self.solution.get_eval(), before.get_eval())
+                || self.hot_enough_to_swap(
+                    &mut rnd,
+                    self.solution.get_eval().value,
+                    before.get_eval().value,
+                )
             {
-                if criterion.is_first_better(current_eval, best_eval) {
-                    best = solution.clone()
+                if criterion.is_first_better(self.solution.get_eval(), best_eval) {
+                    best = self.solution.clone()
                 }
             } else {
-                solution = before.clone();
+                self.solution = before.clone();
             }
 
             self.cooler.cool();

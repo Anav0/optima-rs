@@ -6,7 +6,7 @@ where
 {
     penalty: &'a dyn Fn(&S) -> f64,
     value: &'a dyn Fn(&S) -> f64,
-    is_minimalization_problem: bool,
+    pub is_minimization: bool,
 }
 
 impl<'a, S> Criterion<'a, S>
@@ -16,12 +16,12 @@ where
     pub fn new(
         penalty: &'a dyn Fn(&S) -> f64,
         value: &'a dyn Fn(&S) -> f64,
-        is_minimalization_problem: bool,
+        is_minimization: bool,
     ) -> Self {
         Self {
             penalty,
             value,
-            is_minimalization_problem,
+            is_minimization,
         }
     }
 
@@ -39,8 +39,8 @@ where
             return first.value < second.value;
         }
 
-        // Compare value accorting to problem type
-        return match self.is_minimalization_problem {
+        // Compare value according to problem type
+        return match self.is_minimization {
             true => first.value < second.value,
             false => first.value > second.value,
         };
@@ -170,7 +170,7 @@ mod tests {
         info_b.value = 10.0;
         assert_eq!(true, criterion.is_first_better(&info_a, &info_b));
 
-        criterion.is_minimalization_problem = true;
+        criterion.is_minimization = true;
 
         assert_eq!(false, criterion.is_first_better(&info_a, &info_b));
         info_a.value = 10.0;
@@ -200,7 +200,7 @@ mod tests {
         };
 
         assert_eq!(true, criterion.is_first_better(&info_a, &info_b));
-        criterion.is_minimalization_problem = true;
+        criterion.is_minimization = true;
         assert_eq!(true, criterion.is_first_better(&info_a, &info_b));
     }
 }

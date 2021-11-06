@@ -1,71 +1,84 @@
-use self::evaluator::Evaluator;
+use rand::{prelude::ThreadRng, thread_rng};
 
-pub mod evaluator;
+pub mod crossover;
 
-pub trait Speciment {
-    fn score(&self) -> f64;
+use crate::base::{Criterion, OptAlgorithm, Solution};
+
+pub trait Crosser<S: Solution> {
+    fn cross(&mut self, solution: &mut S);
 }
 
-pub trait Crosser<S: Speciment> {
-    fn cross(&mut self, population: &mut Vec<S>, best: &Vec<S>);
+pub trait Mutator<S: Solution> {
+    fn mutate(&mut self, solution: &mut S);
 }
 
-pub trait Mutator<S: Speciment> {
-    fn mutate(&mut self, population: &mut Vec<S>);
-}
-
-pub struct GeneticAlgorithm<'a, S: Speciment> {
+pub struct GeneticAlgorithm<'a, S>
+where
+    S: Solution,
+{
     pub print_rate: Option<u32>,
-    is_minimalization: bool,
-    crosser: &'a mut dyn Crosser<S>,
-    mutator: &'a mut dyn Mutator<S>,
-    evaluator: &'a mut dyn Evaluator<S>,
+    pub population: Vec<S>,
+    pub mutate: &'a dyn Fn(&mut S),
+    pub breed: &'a dyn Fn(&Vec<S>, &mut ThreadRng) -> [S; 2],
+    pub generations: u32,
 }
 
-impl<'b, 'a, S: Speciment + Clone> GeneticAlgorithm<'a, S> {
-    pub fn is_minimalization(mut self) -> Self {
-        self.is_minimalization = true;
-        self
-    }
-
-    pub fn print_cycles(mut self, print_rate: u32) -> Self {
-        self.print_rate = Some(print_rate);
-        self
-    }
-
+impl<'a, S> GeneticAlgorithm<'a, S>
+where
+    S: Solution,
+{
     pub fn new(
-        crosser: &'a mut dyn Crosser<S>,
-        mutator: &'a mut dyn Mutator<S>,
-        evaluator: &'a mut dyn Evaluator<S>,
+        population: Vec<S>,
+        mutate: &'a dyn Fn(&mut S),
+        breed: &'a dyn Fn(&Vec<S>, &mut ThreadRng) -> [S; 2],
+        cycles: u32,
+        print_rate: Option<u32>,
     ) -> Self {
         Self {
-            is_minimalization: false,
-            print_rate: None,
-            crosser,
-            mutator,
-            evaluator,
+            generations: cycles,
+            population,
+            mutate,
+            breed,
+            print_rate,
         }
     }
-
-    pub fn evolve(&mut self, population: &mut Vec<S>, cycles: u32, best_number: u8) -> Vec<S> {
-        if best_number == 0 {
-            panic!("Best number must be greater than 0");
+    fn evaluate_population(&mut self, criterion: &Criterion<S>) {
+        for specimen in self.population.iter_mut() {
+            criterion.evaluate(specimen);
         }
+    }
+}
 
-        let mut best: Vec<S> = vec![population[0].clone(); best_number.into()];
+impl<S> OptAlgorithm<'_, S> for GeneticAlgorithm<'_, S>
+where
+    S: Solution + Clone,
+{
+    fn solve(&mut self, criterion: &mut crate::base::Criterion<S>) -> S {
+        let mutate = self.mutate;
+        let mut rng = thread_rng();
 
-        for i in 0..cycles {
-            self.mutator.mutate(population);
-            self.crosser.cross(population, &best);
-            self.evaluator.evaluate(population);
-            self.evaluator
-                .extract_best(&mut best, population, self.is_minimalization);
+        for generation in 0..self.generations {
+            let mut new_pop: Vec<S> = Vec::with_capacity(self.population.len());
 
-            if self.print_rate.is_some() && i % self.print_rate.unwrap() == 0 {
-                println!("Cycle {}", i);
+            self.evaluate_population(criterion);
+
+            while new_pop.len() < new_pop.capacity() {
+                let children = (self.breed)(&self.population, &mut rng);
+                for mut child in children {
+                    mutate(&mut child);
+                    new_pop.push(child);
+                }
+            }
+            self.population = new_pop;
+            if self.print_rate.is_some() && generation % self.print_rate.unwrap() == 0 {
+                println!("Generation {}", generation);
             }
         }
 
-        best
+        self.evaluate_population(criterion);
+        self.population
+            .sort_by(|a, b| b.get_eval().value.partial_cmp(&a.get_eval().value).unwrap());
+
+        self.population[0].clone()
     }
 }
