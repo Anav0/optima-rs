@@ -1,7 +1,5 @@
-use crate::base::{Solution, State};
-
 pub trait StopCriteria {
-    fn should_stop(&mut self, solution: &dyn Solution) -> bool;
+    fn should_stop(&mut self, value: f64) -> bool;
 }
 
 pub struct NotGettingBetter {
@@ -29,20 +27,19 @@ impl NotGettingBetter {
     }
 }
 impl StopCriteria for NotGettingBetter {
-    fn should_stop(&mut self, solution: &dyn Solution) -> bool {
+    fn should_stop(&mut self, value: f64) -> bool {
         self.steps += 1;
         if self.steps > self.max_steps {
             return true;
         };
 
-        let sol_info = solution.get_info(State::Current);
         let is_better = match self.is_minimazation {
-            true => sol_info.value > self.best_value,
-            false => sol_info.value < self.best_value,
+            true => value > self.best_value,
+            false => value < self.best_value,
         };
 
         if is_better {
-            self.best_value = sol_info.value;
+            self.best_value = value;
             self.found_at = self.steps;
         }
 
