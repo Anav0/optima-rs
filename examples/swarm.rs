@@ -10,9 +10,10 @@ fn main() {
     let max = 10.0;
 
     let initial_sol = FunctionSolution::new(min, max);
-    let mut stop_criteria = MaxSteps::new(1000);
+    let mut stop_criteria = MaxSteps::new(20000);
     let mut swarm = ParticleSwarm::new(10, initial_sol, &mut stop_criteria);
 
+    //@Info: For this function best value is 2594 (when x and y is limited to range -10..10).
     let mut criterion = Criterion::new(
         &|_| 0.0,
         &|sol: &FunctionSolution| booth(sol.x, sol.y),
