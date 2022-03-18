@@ -24,6 +24,7 @@ where
     fn solve(&mut self, criterion: &mut Criterion<S>) -> S;
 }
 
+//@Improvement: Can be implemented via derive macro.
 pub trait Solution {
     fn get_eval(&self) -> &Evaluation;
     fn get_eval_mut(&mut self) -> &mut Evaluation;

@@ -1,6 +1,27 @@
 pub trait StopCriteria {
     fn should_stop(&mut self, value: f64) -> bool;
 }
+pub struct MaxSteps {
+    max_steps: usize,
+    current_step: usize,
+}
+impl MaxSteps {
+    pub fn new(max_steps: usize) -> Self {
+        Self {
+            max_steps,
+            current_step: 1,
+        }
+    }
+}
+impl StopCriteria for MaxSteps {
+    fn should_stop(&mut self, value: f64) -> bool {
+        if self.current_step >= self.max_steps {
+            return true;
+        }
+        self.current_step += 1;
+        false
+    }
+}
 
 pub struct NotGettingBetter {
     max_steps: u64,
