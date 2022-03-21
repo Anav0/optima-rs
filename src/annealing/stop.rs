@@ -1,5 +1,6 @@
 pub trait StopCriteria {
     fn should_stop(&mut self, value: f64) -> bool;
+    fn reset(&mut self);
 }
 pub struct MaxSteps {
     max_steps: usize,
@@ -20,6 +21,10 @@ impl StopCriteria for MaxSteps {
         }
         self.current_step += 1;
         false
+    }
+
+    fn reset(&mut self) {
+        self.current_step = 1;
     }
 }
 
@@ -69,5 +74,15 @@ impl StopCriteria for NotGettingBetter {
         };
 
         return false;
+    }
+
+    fn reset(&mut self) {
+        self.steps = 0;
+        self.found_at = 0;
+        let best_value = match self.is_minimazation {
+            true => f64::MAX,
+            false => f64::MIN,
+        };
+        self.best_value = best_value;
     }
 }

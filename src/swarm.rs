@@ -5,7 +5,7 @@ use rand::{
 };
 
 use crate::{
-    annealing::stop::StopCriteria,
+    annealing::stop::{self, StopCriteria},
     base::{Criterion, Evaluation, OptAlgorithm, Solution},
 };
 
@@ -14,9 +14,9 @@ pub struct Particle {
     best_local_index: usize,
     velocity_x: f64,
     velocity_y: f64,
+    eval: Evaluation,
     pub x: f64,
     pub y: f64,
-    eval: Evaluation,
 }
 
 impl Particle {
@@ -65,22 +65,6 @@ pub struct ParticleSwarm<'a> {
 }
 
 impl<'a> ParticleSwarm<'a> {
-    fn is_better(&self, that: usize, this: usize, is_minimization: bool) -> bool {
-        let best_value = self.particles[this].get_value();
-        let current_value = self.particles[that].get_value();
-
-        if is_minimization {
-            if current_value < best_value {
-                return true;
-            }
-        } else {
-            if current_value > best_value {
-                return true;
-            }
-        }
-        false
-    }
-
     pub fn new(size: usize, min: f64, max: f64, stop_criteria: &'a mut dyn StopCriteria) -> Self {
         let rng = thread_rng();
         let distribution = Uniform::new_inclusive(min, max);
@@ -97,6 +81,36 @@ impl<'a> ParticleSwarm<'a> {
             points_distribution: distribution,
         }
     }
+
+    pub fn reset(&mut self, min: f64, max: f64) {
+        self.stop_criteria.reset();
+        self.min = min;
+        self.max = max;
+
+        let rng = thread_rng();
+        self.rng = rng;
+
+        let distribution = Uniform::new_inclusive(min, max);
+        self.points_distribution = distribution;
+        self.best_global_index = 0;
+    }
+
+    fn is_better(&self, that: usize, this: usize, is_minimization: bool) -> bool {
+        let best_value = self.particles[this].get_value();
+        let current_value = self.particles[that].get_value();
+
+        if is_minimization {
+            if current_value < best_value {
+                return true;
+            }
+        } else {
+            if current_value > best_value {
+                return true;
+            }
+        }
+        false
+    }
+
     fn initialize(&mut self, criterion: &mut Criterion<Particle>) {
         self.particles.clear();
 
@@ -127,7 +141,6 @@ impl<'a> OptAlgorithm<'a, Particle> for ParticleSwarm<'a> {
         self.initialize(criterion);
 
         let best_value = self.particles[self.best_global_index].get_value();
-        let mut counter = 0;
         while !self.stop_criteria.should_stop(best_value) {
             for i in 0..self.particles.len() {
                 //Pick random parameters r_i and r_g
@@ -155,22 +168,11 @@ impl<'a> OptAlgorithm<'a, Particle> for ParticleSwarm<'a> {
                 //Update position in search space according to velocity
                 particle.update_position(self.min, self.max);
 
-                if counter < 2 {
-                    println!(
-                        "{} {} {} {}",
-                        particle.x, particle.y, particle.velocity_x, particle.velocity_y
-                    );
-                }
-
                 //Update best and local trackers
                 if self.is_better(i, self.best_global_index, criterion.is_minimization) {
                     self.best_global_index = i;
                 }
             }
-            if counter < 2 {
-                println!("----------");
-            }
-            counter += 1;
         }
         //@ Improvement: Do not clone
         self.particles[self.best_global_index].clone()
