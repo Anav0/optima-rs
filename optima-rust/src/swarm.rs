@@ -1,4 +1,4 @@
-use optima_macros::{solution_attr, Solution};
+use optima_macros::{solution_attr, DerivedSolution};
 use rand::{
     distributions::Uniform,
     prelude::{Distribution, ThreadRng},
@@ -11,7 +11,7 @@ use crate::{
 };
 
 #[solution_attr]
-#[derive(Clone, Solution)]
+#[derive(Clone, DerivedSolution)]
 pub struct Particle {
     best_local_index: usize,
     velocity_x: f64,

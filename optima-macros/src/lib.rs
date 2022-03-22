@@ -4,7 +4,7 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse::Parser, parse_macro_input, DeriveInput, Error};
 
-#[proc_macro_derive(Solution)]
+#[proc_macro_derive(DerivedSolution)]
 pub fn solution_derive(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
 

@@ -5,23 +5,21 @@ use optima_rust::base::{Criterion, Evaluation, OptAlgorithm, Solution};
 
 use optima_rust::genetic::crossover::tournament;
 use optima_rust::genetic::GeneticAlgorithm;
+use optima_rust::{solution_attr, DerivedSolution};
 use rand::prelude::ThreadRng;
 use rand::{random, thread_rng, Rng};
 
-// =====================================================
-// === Solution for annealing and genetic algorithms ===
-// =====================================================
-#[derive(Clone, Debug)]
+#[solution_attr]
+#[derive(Clone, Debug, DerivedSolution)]
 pub struct KnapsackSolution {
-    pub info: Evaluation,
     pub picked_items: Vec<bool>,
 }
 
 impl KnapsackSolution {
     pub fn new(picked_items: Vec<bool>) -> Self {
         Self {
-            info: Evaluation::default(),
             picked_items,
+            eval: Evaluation::default(),
         }
     }
     pub fn random_init(size: usize) -> Self {
@@ -30,18 +28,9 @@ impl KnapsackSolution {
             picked_items.push(random::<bool>());
         }
         Self {
-            info: Evaluation::default(),
             picked_items,
+            eval: Evaluation::default(),
         }
-    }
-}
-
-impl Solution for KnapsackSolution {
-    fn get_eval(&self) -> &Evaluation {
-        &self.info
-    }
-    fn get_eval_mut(&mut self) -> &mut Evaluation {
-        &mut self.info
     }
 }
 
