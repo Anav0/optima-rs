@@ -59,25 +59,24 @@ where
         criterion.evaluate(&mut self.solution);
         let mut best = self.solution.clone();
 
-        let change = self.change; //INFO: just for clarity
+        let change = self.change;
 
         //Main loop
-        while !self
-            .stop_criteria
-            .should_stop(self.solution.get_eval().value)
-        {
+        while !self.stop_criteria.should_stop(self.solution.get_value()) {
             //Save current state and then change and evaluate it
             let before = self.solution.clone();
             (change)(self);
             criterion.evaluate(&mut self.solution);
 
             let best_eval = best.get_eval();
-            if criterion.is_first_better(self.solution.get_eval(), before.get_eval())
-                || self.hot_enough_to_swap(
-                    &mut rnd,
-                    self.solution.get_eval().value,
-                    before.get_eval().value,
-                )
+
+            let hot_enough = self.hot_enough_to_swap(
+                &mut rnd,
+                self.solution.get_eval().value,
+                before.get_eval().value,
+            );
+
+            if criterion.is_first_better(self.solution.get_eval(), before.get_eval()) || hot_enough
             {
                 if criterion.is_first_better(self.solution.get_eval(), best_eval) {
                     best = self.solution.clone()
