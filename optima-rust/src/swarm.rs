@@ -1,4 +1,3 @@
-use optima_macros::{solution_attr, DerivedSolution};
 use rand::{
     distributions::Uniform,
     prelude::{Distribution, ThreadRng},
@@ -6,8 +5,8 @@ use rand::{
 };
 
 use crate::{
-    annealing::stop::{self, StopCriteria},
-    base::{Criterion, Evaluation, OptAlgorithm, Solution},
+    annealing::stop::StopCriteria,
+    base::{solution_attr, Criterion, DerivedSolution, Evaluation, OptAlgorithm, Solution},
 };
 
 #[solution_attr]

@@ -1,6 +1,8 @@
 pub use self::criterion::Criterion;
 mod criterion;
 
+pub use optima_macros::{solution_attr, DerivedSolution};
+
 #[derive(Clone, Copy, Debug)]
 pub struct Evaluation {
     pub value: f64,

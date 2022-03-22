@@ -15,7 +15,7 @@ impl MaxSteps {
     }
 }
 impl StopCriteria for MaxSteps {
-    fn should_stop(&mut self, value: f64) -> bool {
+    fn should_stop(&mut self, _value: f64) -> bool {
         if self.current_step >= self.max_steps {
             return true;
         }

@@ -8,19 +8,19 @@ use syn::{parse::Parser, parse_macro_input, DeriveInput, Error};
 pub fn solution_derive(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
 
-    eprintln!("{:#?}", &ast);
+    // eprintln!("{:#?}", &ast);
 
     let name = &ast.ident;
 
     quote! {
-        impl crate::base::Solution for #name {
+        impl Solution for #name {
             fn get_value(&self) -> f64{
                 self.eval.value
             }
-            fn get_eval(&self) -> &crate::base::Evaluation{
+            fn get_eval(&self) -> &Evaluation{
                 &self.eval
             }
-            fn get_eval_mut(&mut self) -> &mut crate::base::Evaluation{
+            fn get_eval_mut(&mut self) -> &mut Evaluation{
                 &mut self.eval
             }
         }
@@ -29,7 +29,7 @@ pub fn solution_derive(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
-pub fn solution_attr(args: TokenStream, input: TokenStream) -> TokenStream {
+pub fn solution_attr(_args: TokenStream, input: TokenStream) -> TokenStream {
     let mut ast = parse_macro_input!(input as DeriveInput);
     match &mut ast.data {
         syn::Data::Struct(ref mut struct_data) => match &mut struct_data.fields {

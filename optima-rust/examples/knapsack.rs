@@ -1,11 +1,12 @@
 use optima_rust::annealing::{
     coolers::QuadraticCooler, stop::NotGettingBetter, SimulatedAnnealing,
 };
-use optima_rust::base::{Criterion, Evaluation, OptAlgorithm, Solution};
+use optima_rust::base::{
+    solution_attr, Criterion, DerivedSolution, Evaluation, OptAlgorithm, Solution,
+};
 
 use optima_rust::genetic::crossover::tournament;
 use optima_rust::genetic::GeneticAlgorithm;
-use optima_rust::{solution_attr, DerivedSolution};
 use rand::prelude::ThreadRng;
 use rand::{random, thread_rng, Rng};
 

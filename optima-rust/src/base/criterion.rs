@@ -61,23 +61,15 @@ where
 
 #[cfg(test)]
 mod tests {
+    use optima_macros::{solution_attr, DerivedSolution};
+
     use crate::base::{Evaluation, Solution};
 
     use super::Criterion;
 
-    #[derive(Clone)]
-    struct TestSolution {
-        eval: Evaluation,
-    }
-    impl Solution for TestSolution {
-        fn get_eval(&self) -> &Evaluation {
-            &self.eval
-        }
-
-        fn get_eval_mut(&mut self) -> &mut Evaluation {
-            &mut self.eval
-        }
-    }
+    #[solution_attr]
+    #[derive(Clone, DerivedSolution)]
+    struct TestSolution {}
 
     #[test]
     fn evaluate_penalty_evaluated_correctly() {
