@@ -8,20 +8,19 @@ use syn::{parse::Parser, parse_macro_input, DeriveInput, Error};
 pub fn solution_derive(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
 
-    // eprintln!("{:#?}", &ast);
+    eprintln!("{:#?}", &ast);
 
     let name = &ast.ident;
-    let trait_name = &ast.ident;
 
     quote! {
-        use crate::base::{Evaluation, Solution};
-
-        impl Solution for #name {
-            fn get_eval(&self) -> &Evaluation{
+        impl crate::base::Solution for #name {
+            fn get_value(&self) -> f64{
+                self.eval.value
+            }
+            fn get_eval(&self) -> &crate::base::Evaluation{
                 &self.eval
             }
-
-            fn get_eval_mut(&mut self) -> &mut Evaluation{
+            fn get_eval_mut(&mut self) -> &mut crate::base::Evaluation{
                 &mut self.eval
             }
         }

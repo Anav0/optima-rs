@@ -1,6 +1,6 @@
 use optima_rust::{
     annealing::stop::{MaxSteps, StopCriteria},
-    base::{Criterion, OptAlgorithm},
+    base::{Criterion, OptAlgorithm, Solution},
     swarm::{Particle, ParticleSwarm},
 };
 

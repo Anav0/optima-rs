@@ -1,3 +1,4 @@
+use optima_macros::{solution_attr, Solution};
 use rand::{
     distributions::Uniform,
     prelude::{Distribution, ThreadRng},
@@ -9,20 +10,17 @@ use crate::{
     base::{Criterion, Evaluation, OptAlgorithm, Solution},
 };
 
-#[derive(Clone)]
+#[solution_attr]
+#[derive(Clone, Solution)]
 pub struct Particle {
     best_local_index: usize,
     velocity_x: f64,
     velocity_y: f64,
-    eval: Evaluation,
     pub x: f64,
     pub y: f64,
 }
 
 impl Particle {
-    pub fn get_value(&self) -> f64 {
-        self.eval.value
-    }
     pub fn update_position(&mut self, min: f64, max: f64) {
         self.x += self.velocity_x;
         self.y += self.velocity_y;
@@ -42,15 +40,7 @@ impl Particle {
         }
     }
 }
-impl Solution for Particle {
-    fn get_eval(&self) -> &Evaluation {
-        &self.eval
-    }
 
-    fn get_eval_mut(&mut self) -> &mut Evaluation {
-        &mut self.eval
-    }
-}
 pub struct ParticleSwarm<'a> {
     pub particles: Vec<Particle>,
     best_global_index: usize,
