@@ -1,5 +1,8 @@
 use self::{coolers::Cooler, stop::StopCriteria};
-use crate::base::{Criterion, OptAlgorithm, Solution};
+use crate::{
+    analysis::Saver,
+    base::{Criterion, OptAlgorithm, Solution},
+};
 use rand::{prelude::ThreadRng, Rng};
 use std::f64::consts::E;
 
@@ -88,5 +91,13 @@ where
             self.cooler.cool();
         }
         best
+    }
+
+    fn add_saver(&mut self, saver: &mut dyn Saver<S>) {
+        todo!()
+    }
+
+    fn clear_savers(&mut self) {
+        todo!()
     }
 }

@@ -1,3 +1,5 @@
+use crate::analysis::Saver;
+
 pub use self::criterion::Criterion;
 mod criterion;
 
@@ -24,6 +26,8 @@ where
     S: Clone,
 {
     fn solve(&mut self, criterion: &mut Criterion<S>) -> S;
+    fn add_saver(&mut self, saver: &'a mut dyn Saver<S>);
+    fn clear_savers(&mut self);
 }
 
 pub trait Solution {

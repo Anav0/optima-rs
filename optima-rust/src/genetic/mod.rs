@@ -2,7 +2,10 @@ use rand::{prelude::ThreadRng, thread_rng};
 
 pub mod crossover;
 
-use crate::base::{Criterion, OptAlgorithm, Solution};
+use crate::{
+    analysis::Saver,
+    base::{Criterion, OptAlgorithm, Solution},
+};
 
 pub trait Crosser<S: Solution> {
     fn cross(&mut self, solution: &mut S);
@@ -80,5 +83,13 @@ where
             .sort_by(|a, b| b.get_eval().value.partial_cmp(&a.get_eval().value).unwrap());
 
         self.population[0].clone()
+    }
+
+    fn add_saver(&mut self, saver: &mut dyn Saver<S>) {
+        todo!()
+    }
+
+    fn clear_savers(&mut self) {
+        todo!()
     }
 }

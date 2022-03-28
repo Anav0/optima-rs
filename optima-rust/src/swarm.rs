@@ -5,6 +5,7 @@ use rand::{
 };
 
 use crate::{
+    analysis::{AsCsvRow, Saver},
     annealing::stop::StopCriteria,
     base::{solution_attr, Criterion, DerivedSolution, Evaluation, OptAlgorithm, Solution},
 };
@@ -17,6 +18,21 @@ pub struct Particle {
     velocity_y: f64,
     pub x: f64,
     pub y: f64,
+}
+
+impl AsCsvRow for Particle {
+    fn as_row(&self, iter: usize) -> String {
+        format!(
+            "{},{},{},{},{},{},{}",
+            iter,
+            self.x,
+            self.y,
+            self.velocity_x,
+            self.velocity_y,
+            self.best_local_index,
+            self.get_value()
+        )
+    }
 }
 
 impl Particle {
@@ -51,6 +67,7 @@ pub struct ParticleSwarm<'a> {
     inertia: f64,
     rng: ThreadRng,
     points_distribution: Uniform<f64>,
+    savers: Vec<&'a mut dyn Saver<Particle>>,
 }
 
 impl<'a> ParticleSwarm<'a> {
@@ -68,6 +85,7 @@ impl<'a> ParticleSwarm<'a> {
             min,
             max,
             points_distribution: distribution,
+            savers: vec![],
         }
     }
 
@@ -82,6 +100,10 @@ impl<'a> ParticleSwarm<'a> {
         let distribution = Uniform::new_inclusive(min, max);
         self.points_distribution = distribution;
         self.best_global_index = 0;
+
+        for saver in &mut self.savers {
+            saver.reset();
+        }
     }
 
     fn is_better(&self, that: usize, this: usize, is_minimization: bool) -> bool {
@@ -125,13 +147,16 @@ impl<'a> ParticleSwarm<'a> {
     }
 }
 
-impl<'a> OptAlgorithm<'a, Particle> for ParticleSwarm<'a> {
+impl<'b> OptAlgorithm<'b, Particle> for ParticleSwarm<'b> {
     fn solve(&mut self, criterion: &mut Criterion<Particle>) -> Particle {
         self.initialize(criterion);
 
         let best_value = self.particles[self.best_global_index].get_value();
         while !self.stop_criteria.should_stop(best_value) {
             for i in 0..self.particles.len() {
+                for saver in &mut self.savers {
+                    saver.save_element(&self.particles[i]);
+                }
                 //Pick random parameters r_i and r_g
                 let r_local: f64 = self.rng.gen();
                 let r_global: f64 = self.rng.gen();
@@ -163,7 +188,18 @@ impl<'a> OptAlgorithm<'a, Particle> for ParticleSwarm<'a> {
                 }
             }
         }
+        for saver in &mut self.savers {
+            saver.flush();
+        }
         //@ Improvement: Do not clone
         self.particles[self.best_global_index].clone()
+    }
+
+    fn add_saver(&mut self, saver: &'b mut dyn Saver<Particle>) {
+        self.savers.push(saver);
+    }
+
+    fn clear_savers(&mut self) {
+        self.savers.clear();
     }
 }
