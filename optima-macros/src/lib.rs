@@ -8,8 +8,6 @@ use syn::{parse::Parser, parse_macro_input, DeriveInput, Error};
 pub fn solution_derive(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
 
-    // eprintln!("{:#?}", &ast);
-
     let name = &ast.ident;
 
     quote! {
@@ -17,9 +15,11 @@ pub fn solution_derive(input: TokenStream) -> TokenStream {
             fn get_value(&self) -> f64{
                 self.eval.value
             }
+
             fn get_eval(&self) -> &Evaluation{
                 &self.eval
             }
+
             fn get_eval_mut(&mut self) -> &mut Evaluation{
                 &mut self.eval
             }

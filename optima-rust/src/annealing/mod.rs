@@ -1,7 +1,7 @@
 use self::{coolers::Cooler, stop::StopCriteria};
 use crate::{
     analysis::Saver,
-    base::{Criterion, OptAlgorithm, Solution},
+    base::{Criterion, OptAlgorithm, Problem, Solution},
 };
 use rand::{prelude::ThreadRng, Rng};
 use std::f64::consts::E;
@@ -9,27 +9,29 @@ use std::f64::consts::E;
 pub mod coolers;
 pub mod stop;
 
-pub struct SimulatedAnnealing<'a, S> {
-    pub solution: S,
-    stop_criteria: &'a mut dyn StopCriteria,
-    cooler: &'a mut dyn Cooler,
-    change: &'a dyn Fn(&mut Self),
+pub struct SimulatedAnnealing<'a, P, S, C, SC> {
+    stop_criteria: SC,
+    cooler: C,
+    change: &'a dyn Fn(&mut S, &P),
+    initial_solution: &'a S,
 }
 
-impl<'a, S> SimulatedAnnealing<'a, S>
+impl<'a, P, S, C, SC> SimulatedAnnealing<'a, P, S, C, SC>
 where
-    S: Solution + Clone,
+    S: Solution,
+    C: Cooler,
+    SC: StopCriteria,
 {
     pub fn new(
-        solution: S,
-        stop_criteria: &'a mut dyn StopCriteria,
-        cooler: &'a mut dyn Cooler,
-        change_sol: &'a dyn Fn(&mut Self),
+        initial_solution: &'a S,
+        stop_criteria: SC,
+        cooler: C,
+        change_sol: &'a dyn Fn(&mut S, &P),
     ) -> Self {
         Self {
+            initial_solution,
             stop_criteria,
             cooler,
-            solution,
             change: change_sol,
         }
     }
@@ -52,40 +54,46 @@ where
     }
 }
 
-impl<'a, S> OptAlgorithm<'a, S> for SimulatedAnnealing<'a, S>
+impl<'a, P, S, C, SC> OptAlgorithm<'a, P, S> for SimulatedAnnealing<'a, P, S, C, SC>
 where
-    S: Solution + Clone,
+    S: Solution,
+    C: Cooler,
+    SC: StopCriteria,
+    P: Problem,
 {
-    fn solve(&mut self, criterion: &mut Criterion<S>) -> S {
+    fn solve(&mut self, problem: P, criterion: &mut Criterion<S>) -> S {
+        self.reset();
+
         let mut rnd = rand::thread_rng();
+        let mut solution = self.initial_solution.clone();
+
         //Initial evaluation
-        criterion.evaluate(&mut self.solution);
-        let mut best = self.solution.clone();
+        criterion.evaluate(&mut solution);
+        let mut best = solution.clone();
 
         let change = self.change;
 
         //Main loop
-        while !self.stop_criteria.should_stop(self.solution.get_value()) {
+        while !self.stop_criteria.should_stop(solution.get_value()) {
             //Save current state and then change and evaluate it
-            let before = self.solution.clone();
-            (change)(self);
-            criterion.evaluate(&mut self.solution);
+            let before = solution.clone();
+            (change)(&mut solution, &problem);
+            criterion.evaluate(&mut solution);
 
             let best_eval = best.get_eval();
 
             let hot_enough = self.hot_enough_to_swap(
                 &mut rnd,
-                self.solution.get_eval().value,
+                solution.get_eval().value,
                 before.get_eval().value,
             );
 
-            if criterion.is_first_better(self.solution.get_eval(), before.get_eval()) || hot_enough
-            {
-                if criterion.is_first_better(self.solution.get_eval(), best_eval) {
-                    best = self.solution.clone()
+            if criterion.is_first_better(solution.get_eval(), before.get_eval()) || hot_enough {
+                if criterion.is_first_better(solution.get_eval(), best_eval) {
+                    best = solution.clone()
                 }
             } else {
-                self.solution = before.clone();
+                solution = before.clone();
             }
 
             self.cooler.cool();
@@ -99,5 +107,10 @@ where
 
     fn clear_savers(&mut self) {
         todo!()
+    }
+
+    fn reset(&mut self) {
+        self.cooler.reset();
+        self.stop_criteria.reset();
     }
 }

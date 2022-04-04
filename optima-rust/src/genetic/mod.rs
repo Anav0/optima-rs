@@ -4,7 +4,7 @@ pub mod crossover;
 
 use crate::{
     analysis::Saver,
-    base::{Criterion, OptAlgorithm, Solution},
+    base::{Criterion, OptAlgorithm, Problem, Solution},
 };
 
 pub trait Crosser<S: Solution> {
@@ -22,8 +22,9 @@ where
     pub print_rate: Option<u32>,
     pub population: Vec<S>,
     pub mutate: &'a dyn Fn(&mut S),
-    pub breed: &'a dyn Fn(&Vec<S>, &mut ThreadRng) -> [S; 2],
+    pub breed: &'a dyn Fn(u32, &Vec<S>, &mut ThreadRng) -> [S; 2],
     pub generations: u32,
+    initial_population: Vec<S>,
 }
 
 impl<'a, S> GeneticAlgorithm<'a, S>
@@ -33,12 +34,13 @@ where
     pub fn new(
         population: Vec<S>,
         mutate: &'a dyn Fn(&mut S),
-        breed: &'a dyn Fn(&Vec<S>, &mut ThreadRng) -> [S; 2],
-        cycles: u32,
+        breed: &'a dyn Fn(u32, &Vec<S>, &mut ThreadRng) -> [S; 2],
+        generations: u32,
         print_rate: Option<u32>,
     ) -> Self {
         Self {
-            generations: cycles,
+            generations,
+            initial_population: population.clone(),
             population,
             mutate,
             breed,
@@ -52,13 +54,16 @@ where
     }
 }
 
-impl<S> OptAlgorithm<'_, S> for GeneticAlgorithm<'_, S>
+impl<S, P> OptAlgorithm<'_, P, S> for GeneticAlgorithm<'_, S>
 where
-    S: Solution + Clone,
+    S: Solution,
+    P: Problem,
 {
-    fn solve(&mut self, criterion: &mut crate::base::Criterion<S>) -> S {
+    fn solve(&mut self, _problem: P, criterion: &mut crate::base::Criterion<S>) -> S {
         let mutate = self.mutate;
         let mut rng = thread_rng();
+
+        let mut counter = 0;
 
         for generation in 0..self.generations {
             let mut new_pop: Vec<S> = Vec::with_capacity(self.population.len());
@@ -66,7 +71,8 @@ where
             self.evaluate_population(criterion);
 
             while new_pop.len() < new_pop.capacity() {
-                let children = (self.breed)(&self.population, &mut rng);
+                let children = (self.breed)(counter, &self.population, &mut rng);
+                counter += 2;
                 for mut child in children {
                     mutate(&mut child);
                     new_pop.push(child);
@@ -80,7 +86,7 @@ where
 
         self.evaluate_population(criterion);
         self.population
-            .sort_by(|a, b| b.get_eval().value.partial_cmp(&a.get_eval().value).unwrap());
+            .sort_by(|a, b| b.get_value().partial_cmp(&a.get_value()).unwrap());
 
         self.population[0].clone()
     }
@@ -91,5 +97,9 @@ where
 
     fn clear_savers(&mut self) {
         todo!()
+    }
+
+    fn reset(&mut self) {
+        self.population = self.initial_population.clone();
     }
 }

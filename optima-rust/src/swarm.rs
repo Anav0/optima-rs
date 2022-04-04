@@ -7,7 +7,9 @@ use rand::{
 use crate::{
     analysis::{AsCsvRow, Saver},
     annealing::stop::StopCriteria,
-    base::{solution_attr, Criterion, DerivedSolution, Evaluation, OptAlgorithm, Solution},
+    base::{
+        solution_attr, Criterion, DerivedSolution, Evaluation, OptAlgorithm, Problem, Solution,
+    },
 };
 
 #[solution_attr]
@@ -55,25 +57,48 @@ impl Particle {
         }
     }
 }
+#[derive(Copy, Clone)]
+pub struct FnProblem {
+    pub id: u32,
+    pub max: f64,
+    pub min: f64,
+    pub points_distribution: Uniform<f64>,
+}
 
-pub struct ParticleSwarm<'a> {
+impl FnProblem {
+    pub fn new(id: u32, max: f64, min: f64) -> Self {
+        Self {
+            min,
+            max,
+            id,
+            points_distribution: Uniform::new_inclusive(min, max),
+        }
+    }
+}
+
+impl Problem for FnProblem {
+    fn get_id(&self) -> u32 {
+        self.id
+    }
+}
+
+pub struct ParticleSwarm<'a, SC: StopCriteria> {
     pub particles: Vec<Particle>,
     best_global_index: usize,
-    stop_criteria: &'a mut dyn StopCriteria,
+    stop_criteria: SC,
     local_attraction: f64,
     global_attraction: f64,
-    min: f64,
-    max: f64,
     inertia: f64,
     rng: ThreadRng,
-    points_distribution: Uniform<f64>,
     savers: Vec<&'a mut dyn Saver<Particle>>,
 }
 
-impl<'a> ParticleSwarm<'a> {
-    pub fn new(size: usize, min: f64, max: f64, stop_criteria: &'a mut dyn StopCriteria) -> Self {
+impl<'a, SC> ParticleSwarm<'a, SC>
+where
+    SC: StopCriteria,
+{
+    pub fn new(size: usize, stop_criteria: SC) -> Self {
         let rng = thread_rng();
-        let distribution = Uniform::new_inclusive(min, max);
         Self {
             particles: Vec::with_capacity(size),
             best_global_index: 0,
@@ -82,23 +107,15 @@ impl<'a> ParticleSwarm<'a> {
             local_attraction: 0.5,
             inertia: 0.05,
             rng,
-            min,
-            max,
-            points_distribution: distribution,
             savers: vec![],
         }
     }
 
-    pub fn reset(&mut self, min: f64, max: f64) {
+    pub fn reset(&mut self) {
         self.stop_criteria.reset();
-        self.min = min;
-        self.max = max;
 
         let rng = thread_rng();
         self.rng = rng;
-
-        let distribution = Uniform::new_inclusive(min, max);
-        self.points_distribution = distribution;
         self.best_global_index = 0;
 
         for saver in &mut self.savers {
@@ -122,7 +139,7 @@ impl<'a> ParticleSwarm<'a> {
         false
     }
 
-    fn initialize(&mut self, criterion: &mut Criterion<Particle>) {
+    fn initialize(&mut self, problem: &FnProblem, criterion: &mut Criterion<Particle>) {
         self.particles.clear();
 
         for i in 0..self.particles.capacity() {
@@ -131,8 +148,8 @@ impl<'a> ParticleSwarm<'a> {
                 best_local_index: i,
                 velocity_x: self.rng.gen(),
                 velocity_y: self.rng.gen(),
-                x: self.points_distribution.sample(&mut self.rng),
-                y: self.points_distribution.sample(&mut self.rng),
+                x: problem.points_distribution.sample(&mut self.rng),
+                y: problem.points_distribution.sample(&mut self.rng),
                 eval: Evaluation::default(),
             };
 
@@ -147,9 +164,12 @@ impl<'a> ParticleSwarm<'a> {
     }
 }
 
-impl<'b> OptAlgorithm<'b, Particle> for ParticleSwarm<'b> {
-    fn solve(&mut self, criterion: &mut Criterion<Particle>) -> Particle {
-        self.initialize(criterion);
+impl<'b, SC> OptAlgorithm<'b, FnProblem, Particle> for ParticleSwarm<'b, SC>
+where
+    SC: StopCriteria,
+{
+    fn solve(&mut self, problem: FnProblem, criterion: &mut Criterion<Particle>) -> Particle {
+        self.initialize(&problem, criterion);
 
         let best_value = self.particles[self.best_global_index].get_value();
         while !self.stop_criteria.should_stop(best_value) {
@@ -180,7 +200,7 @@ impl<'b> OptAlgorithm<'b, Particle> for ParticleSwarm<'b> {
                 particle.velocity_y = self.inertia * particle.velocity_y + local + global;
 
                 //Update position in search space according to velocity
-                particle.update_position(self.min, self.max);
+                particle.update_position(problem.min, problem.max);
 
                 //Update best and local trackers
                 if self.is_better(i, self.best_global_index, criterion.is_minimization) {
@@ -201,5 +221,9 @@ impl<'b> OptAlgorithm<'b, Particle> for ParticleSwarm<'b> {
 
     fn clear_savers(&mut self) {
         self.savers.clear();
+    }
+
+    fn reset(&mut self) {
+        self.stop_criteria.reset();
     }
 }

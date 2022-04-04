@@ -1,7 +1,8 @@
-pub trait StopCriteria {
+pub trait StopCriteria: Clone {
     fn should_stop(&mut self, value: f64) -> bool;
     fn reset(&mut self);
 }
+#[derive(Clone, Copy)]
 pub struct MaxSteps {
     max_steps: usize,
     current_step: usize,
@@ -28,6 +29,7 @@ impl StopCriteria for MaxSteps {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct NotGettingBetter {
     max_steps: u64,
     best_value: f64,

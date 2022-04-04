@@ -1,5 +1,6 @@
 use crate::base::{Evaluation, Solution};
 
+#[derive(Clone, Copy)]
 pub struct Criterion<'a, S>
 where
     S: Solution,
@@ -70,6 +71,11 @@ mod tests {
     #[solution_attr]
     #[derive(Clone, DerivedSolution)]
     struct TestSolution {}
+    impl Default for TestSolution {
+        fn default() -> Self {
+        Self { eval: Default::default() }
+    }
+    }
 
     #[test]
     fn evaluate_penalty_evaluated_correctly() {

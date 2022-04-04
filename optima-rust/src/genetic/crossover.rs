@@ -3,9 +3,10 @@ use rand::{distributions::Uniform, prelude::ThreadRng, thread_rng, Rng};
 use crate::base::Solution;
 
 pub fn tournament<S>(
+    id: u32,
     population: &Vec<S>,
     is_minimization: bool,
-    cross: &dyn Fn(&S, &S, &mut ThreadRng) -> [S; 2],
+    cross: &dyn Fn(u32, &S, &S, &mut ThreadRng) -> [S; 2],
     rng: &mut ThreadRng,
 ) -> [S; 2]
 where
@@ -35,5 +36,5 @@ where
         }
     }
 
-    cross(parents[0], parents[1], rng)
+    cross(id, parents[0], parents[1], rng)
 }

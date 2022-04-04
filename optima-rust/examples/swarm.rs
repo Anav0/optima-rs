@@ -3,8 +3,8 @@ use std::path::Path;
 use optima_rust::{
     analysis::{AsCsvRow, CsvSaver, Saver},
     annealing::stop::{MaxSteps, StopCriteria},
-    base::{Criterion, OptAlgorithm, Solution},
-    swarm::{Particle, ParticleSwarm},
+    base::{Criterion, OptAlgorithm, Problem, Solution},
+    swarm::{FnProblem, Particle, ParticleSwarm},
 };
 
 type MathFunction = dyn Fn(f64, f64) -> f64;
@@ -15,6 +15,7 @@ struct FnBench<'a> {
     pub global_minimum: (f64, f64, f64),
     pub func: &'a MathFunction,
 }
+
 fn main() {
     let booth_bench = FnBench {
         global_minimum: (1.0, 3.0, 0.0),
@@ -41,7 +42,7 @@ fn main() {
     let benches = vec![booth_bench, bukin_bench, cromick_bench];
 
     let mut stop_criteria = MaxSteps::new(10000);
-    let mut swarm = ParticleSwarm::new(40, benches[0].min, benches[0].max, &mut stop_criteria);
+    let mut swarm = ParticleSwarm::new(40, stop_criteria);
 
     let mut csv = CsvSaver::new(
         String::from("./test.csv"),
@@ -51,13 +52,15 @@ fn main() {
     swarm.add_saver(&mut csv);
 
     for bench in benches {
-        swarm.reset(bench.min, bench.max);
+        swarm.reset();
+
+        let problem = FnProblem::new(0, bench.max, bench.min);
 
         let value_fn = |part: &Particle| (bench.func)(part.x, part.y);
 
         let mut criterion = Criterion::new(&|_| 0.0, &value_fn, true);
 
-        let best = swarm.solve(&mut criterion);
+        let best = swarm.solve(problem, &mut criterion);
         println!(
             "{}({}, {} = {}), Known smallest value: {}({}, {}) = {}",
             bench.name,
