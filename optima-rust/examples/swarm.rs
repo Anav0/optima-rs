@@ -1,9 +1,9 @@
-use std::path::Path;
+
 
 use optima_rust::{
-    analysis::{AsCsvRow, CsvSaver, Saver},
+    analysis::{CsvSaver, Saver},
     annealing::stop::{MaxSteps, StopCriteria},
-    base::{Criterion, OptAlgorithm, Problem, Solution},
+    base::{Criterion, OptAlgorithm, Solution},
     swarm::{FnProblem, Particle, ParticleSwarm},
 };
 
@@ -41,7 +41,7 @@ fn main() {
 
     let benches = vec![booth_bench, bukin_bench, cromick_bench];
 
-    let mut stop_criteria = MaxSteps::new(10000);
+    let stop_criteria = MaxSteps::new(10000);
     let mut swarm = ParticleSwarm::new(40, stop_criteria);
 
     let mut csv = CsvSaver::new(

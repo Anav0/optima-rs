@@ -91,7 +91,7 @@ where
         self.population[0].clone()
     }
 
-    fn add_saver(&mut self, saver: &mut dyn Saver<S>) {
+    fn add_saver(&mut self, _saver: &mut dyn Saver<S>) {
         todo!()
     }
 

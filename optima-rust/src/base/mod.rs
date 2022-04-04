@@ -1,10 +1,9 @@
-use std::{any::type_name, collections::HashMap, hash::Hash};
+use std::{collections::HashMap, hash::Hash};
 
 use crate::{
     analysis::Saver,
     annealing::{coolers::Cooler, stop::StopCriteria, SimulatedAnnealing},
     genetic::GeneticAlgorithm,
-    swarm::{Particle, ParticleSwarm},
 };
 
 pub use self::criterion::Criterion;

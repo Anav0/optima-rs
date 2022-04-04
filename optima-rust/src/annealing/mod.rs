@@ -101,7 +101,7 @@ where
         best
     }
 
-    fn add_saver(&mut self, saver: &mut dyn Saver<S>) {
+    fn add_saver(&mut self, _saver: &mut dyn Saver<S>) {
         todo!()
     }
 

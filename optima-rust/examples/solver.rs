@@ -1,20 +1,17 @@
-use std::{default, path::Path};
+
 
 use optima_rust::{
-    analysis::{AsCsvRow, CsvSaver, Saver},
     annealing::{
         coolers::QuadraticCooler,
-        stop::{MaxSteps, NotGettingBetter, StopCriteria},
-        SimulatedAnnealing,
+        stop::{MaxSteps, NotGettingBetter},
     },
     base::{
         solution_attr, Criterion, DerivedSolution, Evaluation, OptAlgorithm, Problem, Solution,
         Solver,
     },
     genetic::crossover::tournament,
-    swarm::{Particle, ParticleSwarm},
 };
-use rand::{distributions::weighted, prelude::ThreadRng, random, thread_rng, Rng};
+use rand::{prelude::ThreadRng, random, thread_rng, Rng};
 
 #[solution_attr]
 #[derive(Clone, Debug, DerivedSolution)]
@@ -23,13 +20,13 @@ pub struct KnapsackSolution {
 }
 
 impl KnapsackSolution {
-    pub fn new(id: u32, picked_items: Vec<bool>) -> Self {
+    pub fn new(_id: u32, picked_items: Vec<bool>) -> Self {
         Self {
             picked_items,
             eval: Evaluation::default(),
         }
     }
-    pub fn random_init(id: u32, num_items: usize) -> Self {
+    pub fn random_init(_id: u32, num_items: usize) -> Self {
         let mut picked_items = Vec::with_capacity(num_items);
         for _ in 0..picked_items.capacity() {
             picked_items.push(random::<bool>());
