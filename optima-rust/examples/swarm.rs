@@ -1,5 +1,3 @@
-
-
 use optima_rust::{
     analysis::{CsvSaver, Saver},
     annealing::stop::{MaxSteps, StopCriteria},
@@ -52,8 +50,6 @@ fn main() {
     swarm.add_saver(&mut csv);
 
     for bench in benches {
-        swarm.reset();
-
         let problem = FnProblem::new(0, bench.max, bench.min);
 
         let value_fn = |part: &Particle| (bench.func)(part.x, part.y);

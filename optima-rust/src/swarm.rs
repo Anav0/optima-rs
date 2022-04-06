@@ -111,7 +111,7 @@ where
         }
     }
 
-    pub fn reset(&mut self) {
+    fn reset(&mut self) {
         self.stop_criteria.reset();
 
         let rng = thread_rng();
@@ -139,7 +139,7 @@ where
         false
     }
 
-    fn initialize(&mut self, problem: &FnProblem, criterion: &mut Criterion<Particle>) {
+    fn initialize(&mut self, problem: &FnProblem, criterion: &mut Criterion<FnProblem, Particle>) {
         self.particles.clear();
 
         for i in 0..self.particles.capacity() {
@@ -153,7 +153,7 @@ where
                 eval: Evaluation::default(),
             };
 
-            criterion.evaluate(&mut particle);
+            criterion.evaluate(&problem, &mut particle);
             self.particles.push(particle);
 
             //If current particle is better then best save that info
@@ -168,7 +168,12 @@ impl<'b, SC> OptAlgorithm<'b, FnProblem, Particle> for ParticleSwarm<'b, SC>
 where
     SC: StopCriteria,
 {
-    fn solve(&mut self, problem: FnProblem, criterion: &mut Criterion<Particle>) -> Particle {
+    fn solve(
+        &mut self,
+        problem: FnProblem,
+        criterion: &mut Criterion<FnProblem, Particle>,
+    ) -> Particle {
+        self.reset();
         self.initialize(&problem, criterion);
 
         let best_value = self.particles[self.best_global_index].get_value();

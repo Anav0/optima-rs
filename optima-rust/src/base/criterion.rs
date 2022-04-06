@@ -1,22 +1,23 @@
-use crate::base::{Evaluation, Solution};
+use crate::base::{Evaluation, Problem, Solution};
 
 #[derive(Clone, Copy)]
-pub struct Criterion<'a, S>
+pub struct Criterion<'a, P, S>
 where
     S: Solution,
 {
-    penalty: &'a dyn Fn(&S) -> f64,
-    value: &'a dyn Fn(&S) -> f64,
+    penalty: &'a dyn Fn(&P, &S) -> f64,
+    value: &'a dyn Fn(&P, &S) -> f64,
     pub is_minimization: bool,
 }
 
-impl<'a, S> Criterion<'a, S>
+impl<'a, P, S> Criterion<'a, P, S>
 where
     S: Solution,
+    P: Problem,
 {
     pub fn new(
-        penalty: &'a dyn Fn(&S) -> f64,
-        value: &'a dyn Fn(&S) -> f64,
+        penalty: &'a dyn Fn(&P, &S) -> f64,
+        value: &'a dyn Fn(&P, &S) -> f64,
         is_minimization: bool,
     ) -> Self {
         Self {
@@ -47,11 +48,11 @@ where
         };
     }
 
-    pub fn evaluate(&self, solution: &mut S) {
-        let mut value = (self.penalty)(solution);
+    pub fn evaluate(&self, problem: &P, solution: &mut S) {
+        let mut value = (self.penalty)(problem, solution);
         let is_feasible = value == 0.0;
         if is_feasible {
-            value = (self.value)(solution);
+            value = (self.value)(problem, solution);
         }
 
         let mut eval = solution.get_eval_mut();
@@ -64,7 +65,7 @@ where
 mod tests {
     use optima_macros::{solution_attr, DerivedSolution};
 
-    use crate::base::{Evaluation, Solution};
+    use crate::base::{Evaluation, Problem, Solution};
 
     use super::Criterion;
 
@@ -73,25 +74,35 @@ mod tests {
     struct TestSolution {}
     impl Default for TestSolution {
         fn default() -> Self {
-        Self { eval: Default::default() }
+            Self {
+                eval: Default::default(),
+            }
+        }
     }
+
+    #[derive(Clone, Copy)]
+    struct TestProblem;
+    impl Problem for TestProblem {
+        fn get_id(&self) -> u32 {
+            1
+        }
     }
 
     #[test]
     fn evaluate_penalty_evaluated_correctly() {
-        fn penalty(_: &TestSolution) -> f64 {
+        fn penalty(_: &TestProblem, _: &TestSolution) -> f64 {
             10.0
         }
 
-        fn value(_: &TestSolution) -> f64 {
+        fn value(_: &TestProblem, _: &TestSolution) -> f64 {
             20.0
         }
         let criterion = Criterion::new(&penalty, &value, false);
         let mut initial_state = TestSolution {
             eval: Evaluation::default(),
         };
-
-        criterion.evaluate(&mut initial_state);
+        let problem = TestProblem {};
+        criterion.evaluate(&problem, &mut initial_state);
 
         let info = initial_state.get_eval();
 
@@ -101,19 +112,20 @@ mod tests {
 
     #[test]
     fn evaluate_value_evaluated_correctly() {
-        fn penalty(_: &TestSolution) -> f64 {
+        fn penalty(_: &TestProblem, _: &TestSolution) -> f64 {
             0.0
         }
 
-        fn value(_: &TestSolution) -> f64 {
+        fn value(_: &TestProblem, _: &TestSolution) -> f64 {
             20.0
         }
-        let criterion = Criterion::<TestSolution>::new(&penalty, &value, false);
+        let criterion = Criterion::<TestProblem, TestSolution>::new(&penalty, &value, false);
         let mut initial_state = TestSolution {
             eval: Evaluation::default(),
         };
 
-        criterion.evaluate(&mut initial_state);
+        let problem = TestProblem {};
+        criterion.evaluate(&problem, &mut initial_state);
         let info = initial_state.get_eval();
 
         assert_eq!(20.0, info.value);
@@ -122,14 +134,14 @@ mod tests {
 
     #[test]
     fn evaluate_weird_solution() {
-        fn penalty(_: &TestSolution) -> f64 {
+        fn penalty(_: &TestProblem, _: &TestSolution) -> f64 {
             10.0
         }
 
-        fn value(_: &TestSolution) -> f64 {
+        fn value(_: &TestProblem, _: &TestSolution) -> f64 {
             20.0
         }
-        let criterion = Criterion::<TestSolution>::new(&penalty, &value, false);
+        let criterion = Criterion::<TestProblem, TestSolution>::new(&penalty, &value, false);
         let mut initial_state = TestSolution {
             eval: Evaluation {
                 value: 10.0,
@@ -137,7 +149,8 @@ mod tests {
             },
         };
 
-        criterion.evaluate(&mut initial_state);
+        let problem = TestProblem {};
+        criterion.evaluate(&problem, &mut initial_state);
         let mut info = initial_state.get_eval_mut();
 
         info.value = 10.0;
@@ -146,14 +159,14 @@ mod tests {
 
     #[test]
     fn is_first_better_value_comparison() {
-        fn penalty(_: &TestSolution) -> f64 {
+        fn penalty(_: &TestProblem, _: &TestSolution) -> f64 {
             10.0
         }
 
-        fn value(_: &TestSolution) -> f64 {
+        fn value(_: &TestProblem, _: &TestSolution) -> f64 {
             20.0
         }
-        let mut criterion = Criterion::<TestSolution>::new(&penalty, &value, false);
+        let mut criterion = Criterion::<TestProblem, TestSolution>::new(&penalty, &value, false);
         let mut info_a = Evaluation {
             value: 10.0,
             is_feasible: true,
@@ -178,14 +191,14 @@ mod tests {
 
     #[test]
     fn is_first_better_take_feasibility_into_account() {
-        fn penalty<T>(_: &T) -> f64 {
+        fn penalty<T>(_: &TestProblem, _: &T) -> f64 {
             10.0
         }
 
-        fn value<T>(_: &T) -> f64 {
+        fn value<T>(_: &TestProblem, _: &T) -> f64 {
             20.0
         }
-        let mut criterion = Criterion::<TestSolution>::new(&penalty, &value, false);
+        let mut criterion = Criterion::<TestProblem, TestSolution>::new(&penalty, &value, false);
 
         let info_a = Evaluation {
             value: 30.0,

@@ -47,9 +47,9 @@ where
             print_rate,
         }
     }
-    fn evaluate_population(&mut self, criterion: &Criterion<S>) {
+    fn evaluate_population<P: Problem>(&mut self, problem: &P, criterion: &Criterion<P, S>) {
         for specimen in self.population.iter_mut() {
-            criterion.evaluate(specimen);
+            criterion.evaluate(problem, specimen);
         }
     }
 }
@@ -59,7 +59,7 @@ where
     S: Solution,
     P: Problem,
 {
-    fn solve(&mut self, _problem: P, criterion: &mut crate::base::Criterion<S>) -> S {
+    fn solve(&mut self, problem: P, criterion: &mut crate::base::Criterion<P, S>) -> S {
         let mutate = self.mutate;
         let mut rng = thread_rng();
 
@@ -68,7 +68,7 @@ where
         for generation in 0..self.generations {
             let mut new_pop: Vec<S> = Vec::with_capacity(self.population.len());
 
-            self.evaluate_population(criterion);
+            self.evaluate_population(&problem, criterion);
 
             while new_pop.len() < new_pop.capacity() {
                 let children = (self.breed)(counter, &self.population, &mut rng);
@@ -84,7 +84,7 @@ where
             }
         }
 
-        self.evaluate_population(criterion);
+        self.evaluate_population(&problem, criterion);
         self.population
             .sort_by(|a, b| b.get_value().partial_cmp(&a.get_value()).unwrap());
 

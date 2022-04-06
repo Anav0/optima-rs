@@ -61,14 +61,14 @@ where
     SC: StopCriteria,
     P: Problem,
 {
-    fn solve(&mut self, problem: P, criterion: &mut Criterion<S>) -> S {
+    fn solve(&mut self, problem: P, criterion: &mut Criterion<P, S>) -> S {
         self.reset();
 
         let mut rnd = rand::thread_rng();
         let mut solution = self.initial_solution.clone();
 
         //Initial evaluation
-        criterion.evaluate(&mut solution);
+        criterion.evaluate(&problem, &mut solution);
         let mut best = solution.clone();
 
         let change = self.change;
@@ -78,7 +78,7 @@ where
             //Save current state and then change and evaluate it
             let before = solution.clone();
             (change)(&mut solution, &problem);
-            criterion.evaluate(&mut solution);
+            criterion.evaluate(&problem, &mut solution);
 
             let best_eval = best.get_eval();
 

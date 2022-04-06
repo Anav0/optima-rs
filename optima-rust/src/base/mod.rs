@@ -32,7 +32,7 @@ where
     S: Solution,
     P: Problem,
 {
-    fn solve(&mut self, problem: P, criterion: &mut Criterion<S>) -> S;
+    fn solve(&mut self, problem: P, criterion: &mut Criterion<P, S>) -> S;
     fn reset(&mut self);
     fn add_saver(&mut self, saver: &'a mut dyn Saver<S>);
     fn clear_savers(&mut self);
@@ -54,9 +54,10 @@ pub enum State {
 pub struct Solver<'a, P, S>
 where
     S: Solution,
+    P: Problem,
 {
     problems_soo_far: Vec<u32>,
-    registry: HashMap<u32, (&'a P, Vec<Criterion<'a, S>>)>,
+    registry: HashMap<u32, (&'a P, Vec<Criterion<'a, P, S>>)>,
     algorithms: HashMap<u32, Vec<Box<dyn OptAlgorithm<'a, P, S> + 'a>>>,
 }
 impl<'a, P, S> Solver<'a, P, S>
@@ -87,7 +88,7 @@ where
         self
     }
 
-    pub fn use_criteria(&mut self, criterion: Criterion<'a, S>) -> &mut Self {
+    pub fn use_criteria(&mut self, criterion: Criterion<'a, P, S>) -> &mut Self {
         for id in &self.problems_soo_far {
             self.registry.get_mut(id).unwrap().1.push(criterion.clone());
         }

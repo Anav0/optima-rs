@@ -1,5 +1,3 @@
-
-
 use optima_rust::{
     annealing::{
         coolers::QuadraticCooler,
@@ -38,23 +36,23 @@ impl KnapsackSolution {
     }
 }
 
-pub fn value(values: &Vec<f64>, current: &KnapsackSolution) -> f64 {
+pub fn value(problem: &KnapsackProblem, current: &KnapsackSolution) -> f64 {
     let mut total_value = 0.0;
     for i in 0..current.picked_items.len() {
         let bool_as_number: i8 = current.picked_items[i].into();
-        total_value += bool_as_number as f64 * values[i];
+        total_value += bool_as_number as f64 * problem.values[i];
     }
     total_value
 }
 
-pub fn penalty(capacity: f64, weights: &Vec<f64>, current: &KnapsackSolution) -> f64 {
+pub fn penalty(problem: &KnapsackProblem, current: &KnapsackSolution) -> f64 {
     let mut total_weight = 0.0;
     for i in 0..current.picked_items.len() {
         let bool_as_number: i8 = current.picked_items[i].into();
-        total_weight += bool_as_number as f64 * weights[i];
+        total_weight += bool_as_number as f64 * problem.weights[i];
     }
-    if total_weight > capacity {
-        capacity - total_weight
+    if total_weight > problem.capacity {
+        problem.capacity - total_weight
     } else {
         0.0
     }
@@ -120,7 +118,7 @@ fn random_population(size: usize, num_items: usize) -> Vec<KnapsackSolution> {
     population
 }
 #[derive(Clone, Copy)]
-struct KnapsackProblem<'a> {
+pub struct KnapsackProblem<'a> {
     id: u32,
     pub weights: &'a Vec<f64>,
     pub values: &'a Vec<f64>,
@@ -152,12 +150,7 @@ fn main() {
     let problem2 = KnapsackProblem::new(1, &weights, &values, capacity);
     let problem3 = KnapsackProblem::new(3, &weights, &values, capacity);
 
-    let value_closure: &dyn Fn(&KnapsackSolution) -> f64 = &|current| value(&values, current);
-    let penalty_closure: &dyn Fn(&KnapsackSolution) -> f64 =
-        &|current| penalty(capacity, &weights, current);
-
-    let criterion = Criterion::new(penalty_closure, value_closure, false);
-
+    let criterion = Criterion::new(&penalty, &value, false);
     let cooler = QuadraticCooler::new(1000.0, 0.997);
     let max_steps = MaxSteps::new(10000);
     let not_getting_better = NotGettingBetter::new(100000, 100, false);
