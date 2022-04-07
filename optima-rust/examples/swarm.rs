@@ -1,5 +1,4 @@
 use optima_rust::{
-    analysis::{CsvSaver, Saver},
     annealing::stop::{MaxSteps, StopCriteria},
     base::{Criterion, OptAlgorithm, Solution},
     swarm::{FnProblem, Particle, ParticleSwarm},
@@ -42,19 +41,12 @@ fn main() {
     let stop_criteria = MaxSteps::new(10000);
     let mut swarm = ParticleSwarm::new(40, stop_criteria);
 
-    let mut csv = CsvSaver::new(
-        String::from("./test.csv"),
-        String::from("iter,x,y,velocity_x,velocity_y,best_local,value\n"),
-    );
-
-    swarm.add_saver(&mut csv);
-
     for bench in benches {
         let problem = FnProblem::new(0, bench.max, bench.min);
 
-        let value_fn = |part: &Particle| (bench.func)(part.x, part.y);
+        let value_fn = |problem: &FnProblem, part: &Particle| (bench.func)(part.x, part.y);
 
-        let mut criterion = Criterion::new(&|_| 0.0, &value_fn, true);
+        let mut criterion = Criterion::new(&|_, _| 0.0, &value_fn, true);
 
         let best = swarm.solve(problem, &mut criterion);
         println!(

@@ -5,7 +5,6 @@ use rand::{
 };
 
 use crate::{
-    analysis::{AsCsvRow, Saver},
     annealing::stop::StopCriteria,
     base::{
         solution_attr, Criterion, DerivedSolution, Evaluation, OptAlgorithm, Problem, Solution,
@@ -20,21 +19,6 @@ pub struct Particle {
     velocity_y: f64,
     pub x: f64,
     pub y: f64,
-}
-
-impl AsCsvRow for Particle {
-    fn as_row(&self, iter: usize) -> String {
-        format!(
-            "{},{},{},{},{},{},{}",
-            iter,
-            self.x,
-            self.y,
-            self.velocity_x,
-            self.velocity_y,
-            self.best_local_index,
-            self.get_value()
-        )
-    }
 }
 
 impl Particle {
@@ -82,7 +66,7 @@ impl Problem for FnProblem {
     }
 }
 
-pub struct ParticleSwarm<'a, SC: StopCriteria> {
+pub struct ParticleSwarm<SC: StopCriteria> {
     pub particles: Vec<Particle>,
     best_global_index: usize,
     stop_criteria: SC,
@@ -90,10 +74,9 @@ pub struct ParticleSwarm<'a, SC: StopCriteria> {
     global_attraction: f64,
     inertia: f64,
     rng: ThreadRng,
-    savers: Vec<&'a mut dyn Saver<Particle>>,
 }
 
-impl<'a, SC> ParticleSwarm<'a, SC>
+impl<'a, SC> ParticleSwarm<SC>
 where
     SC: StopCriteria,
 {
@@ -107,7 +90,6 @@ where
             local_attraction: 0.5,
             inertia: 0.05,
             rng,
-            savers: vec![],
         }
     }
 
@@ -117,10 +99,6 @@ where
         let rng = thread_rng();
         self.rng = rng;
         self.best_global_index = 0;
-
-        for saver in &mut self.savers {
-            saver.reset();
-        }
     }
 
     fn is_better(&self, that: usize, this: usize, is_minimization: bool) -> bool {
@@ -164,7 +142,7 @@ where
     }
 }
 
-impl<'b, SC> OptAlgorithm<'b, FnProblem, Particle> for ParticleSwarm<'b, SC>
+impl<'b, SC> OptAlgorithm<'b, FnProblem, Particle> for ParticleSwarm<SC>
 where
     SC: StopCriteria,
 {
@@ -179,9 +157,6 @@ where
         let best_value = self.particles[self.best_global_index].get_value();
         while !self.stop_criteria.should_stop(best_value) {
             for i in 0..self.particles.len() {
-                for saver in &mut self.savers {
-                    saver.save_element(&self.particles[i]);
-                }
                 //Pick random parameters r_i and r_g
                 let r_local: f64 = self.rng.gen();
                 let r_global: f64 = self.rng.gen();
@@ -213,19 +188,9 @@ where
                 }
             }
         }
-        for saver in &mut self.savers {
-            saver.flush();
-        }
+
         //@ Improvement: Do not clone
         self.particles[self.best_global_index].clone()
-    }
-
-    fn add_saver(&mut self, saver: &'b mut dyn Saver<Particle>) {
-        self.savers.push(saver);
-    }
-
-    fn clear_savers(&mut self) {
-        self.savers.clear();
     }
 
     fn reset(&mut self) {

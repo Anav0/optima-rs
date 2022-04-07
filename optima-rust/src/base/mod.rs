@@ -1,7 +1,6 @@
 use std::{collections::HashMap, hash::Hash};
 
 use crate::{
-    analysis::Saver,
     annealing::{coolers::Cooler, stop::StopCriteria, SimulatedAnnealing},
     genetic::GeneticAlgorithm,
 };
@@ -34,8 +33,6 @@ where
 {
     fn solve(&mut self, problem: P, criterion: &mut Criterion<P, S>) -> S;
     fn reset(&mut self);
-    fn add_saver(&mut self, saver: &'a mut dyn Saver<S>);
-    fn clear_savers(&mut self);
 }
 
 pub trait Solution: Clone {
