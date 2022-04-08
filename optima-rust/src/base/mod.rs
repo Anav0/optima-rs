@@ -119,12 +119,11 @@ where
         mutate: &'a MutationFn<S>,
         breed: &'a BreedingFn<S>,
         generations: u32,
-        print_rate: Option<u32>,
     ) -> &mut Self {
         for id in &self.problems_soo_far {
             let genetic =
                 //TODO: get rid of clone()
-                GeneticAlgorithm::new(population.clone(), mutate, breed, generations, print_rate);
+                GeneticAlgorithm::new(population.clone(), mutate, breed, generations);
             self.algorithms.get_mut(id).unwrap().push(Box::new(genetic));
         }
         self

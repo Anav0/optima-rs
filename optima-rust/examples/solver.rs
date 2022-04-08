@@ -163,7 +163,7 @@ fn main() {
         .with_annealing(&initial_solution, cooler, max_steps, &change)
         .solve(&[&problem3])
         .use_criteria(criterion)
-        .with_genetic(population, &mutate_wrapper, &tournament_wrapper, 100, None)
+        .with_genetic(population, &mutate_wrapper, &tournament_wrapper, 100)
         .with_annealing(&initial_solution, cooler, not_getting_better, &change)
         .run();
 

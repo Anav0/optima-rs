@@ -19,7 +19,6 @@ pub struct GeneticAlgorithm<'a, S>
 where
     S: Solution,
 {
-    pub print_rate: Option<u32>,
     pub population: Vec<S>,
     pub mutate: &'a MutationFn<S>,
     pub breed: &'a BreedingFn<S>,
@@ -36,7 +35,6 @@ where
         mutate: &'a MutationFn<S>,
         breed: &'a BreedingFn<S>,
         generations: u32,
-        print_rate: Option<u32>,
     ) -> Self {
         Self {
             generations,
@@ -44,7 +42,6 @@ where
             population,
             mutate,
             breed,
-            print_rate,
         }
     }
     fn evaluate_population<P: Problem>(&mut self, problem: &P, criterion: &Criterion<P, S>) {
@@ -79,9 +76,6 @@ where
                 }
             }
             self.population = new_pop;
-            if self.print_rate.is_some() && generation % self.print_rate.unwrap() == 0 {
-                println!("Generation {}", generation);
-            }
         }
 
         self.evaluate_population(&problem, criterion);
