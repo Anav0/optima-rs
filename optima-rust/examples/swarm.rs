@@ -4,7 +4,8 @@ use optima_rust::{
     swarm::{FnProblem, Particle, ParticleSwarm},
 };
 
-type MathFunction = dyn Fn(f64, f64) -> f64;
+pub type MathFunction = dyn Fn(f64, f64) -> f64;
+
 struct FnBench<'a> {
     pub name: String,
     pub min: f64,

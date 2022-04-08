@@ -12,14 +12,17 @@ pub trait Mutator<S: Solution> {
     fn mutate(&mut self, solution: &mut S);
 }
 
+pub type MutationFn<S> = dyn Fn(&mut S);
+pub type BreedingFn<S> = dyn Fn(u32, &Vec<S>, &mut ThreadRng) -> [S; 2];
+
 pub struct GeneticAlgorithm<'a, S>
 where
     S: Solution,
 {
     pub print_rate: Option<u32>,
     pub population: Vec<S>,
-    pub mutate: &'a dyn Fn(&mut S),
-    pub breed: &'a dyn Fn(u32, &Vec<S>, &mut ThreadRng) -> [S; 2],
+    pub mutate: &'a MutationFn<S>,
+    pub breed: &'a BreedingFn<S>,
     pub generations: u32,
     initial_population: Vec<S>,
 }
@@ -30,8 +33,8 @@ where
 {
     pub fn new(
         population: Vec<S>,
-        mutate: &'a dyn Fn(&mut S),
-        breed: &'a dyn Fn(u32, &Vec<S>, &mut ThreadRng) -> [S; 2],
+        mutate: &'a MutationFn<S>,
+        breed: &'a BreedingFn<S>,
         generations: u32,
         print_rate: Option<u32>,
     ) -> Self {

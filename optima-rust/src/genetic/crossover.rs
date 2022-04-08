@@ -2,11 +2,13 @@ use rand::{distributions::Uniform, prelude::ThreadRng, thread_rng, Rng};
 
 use crate::base::Solution;
 
+pub type CrossFn<S> = dyn Fn(u32, &S, &S, &mut ThreadRng) -> [S; 2];
+
 pub fn tournament<S>(
     id: u32,
     population: &Vec<S>,
     is_minimization: bool,
-    cross: &dyn Fn(u32, &S, &S, &mut ThreadRng) -> [S; 2],
+    cross: &CrossFn<S>,
     rng: &mut ThreadRng,
 ) -> [S; 2]
 where

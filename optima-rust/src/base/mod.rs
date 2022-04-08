@@ -1,15 +1,14 @@
 use std::{collections::HashMap, hash::Hash};
 
 use crate::{
-    annealing::{coolers::Cooler, stop::StopCriteria, SimulatedAnnealing},
-    genetic::GeneticAlgorithm,
+    annealing::{coolers::Cooler, stop::StopCriteria, ChangeFn, SimulatedAnnealing},
+    genetic::{BreedingFn, GeneticAlgorithm, MutationFn},
 };
 
 pub use self::criterion::Criterion;
 mod criterion;
 
 pub use optima_macros::{solution_attr, DerivedSolution};
-use rand::prelude::ThreadRng;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Evaluation {
@@ -97,7 +96,7 @@ where
         initial_sol: &'a S,
         cooler: C,
         stop_criteria: SC,
-        change_sol: &'a dyn Fn(&mut S, &P),
+        change_sol: &'a ChangeFn<S, P>,
     ) -> &mut Self {
         for id in &self.problems_soo_far {
             let annealing = SimulatedAnnealing::new(
@@ -117,8 +116,8 @@ where
     pub fn with_genetic(
         &mut self,
         population: Vec<S>,
-        mutate: &'a dyn Fn(&mut S),
-        breed: &'a dyn Fn(u32, &Vec<S>, &mut ThreadRng) -> [S; 2],
+        mutate: &'a MutationFn<S>,
+        breed: &'a BreedingFn<S>,
         generations: u32,
         print_rate: Option<u32>,
     ) -> &mut Self {

@@ -6,10 +6,12 @@ use std::f64::consts::E;
 pub mod coolers;
 pub mod stop;
 
+pub type ChangeFn<S, P> = dyn Fn(&mut S, &P);
+
 pub struct SimulatedAnnealing<'a, P, S, C, SC> {
     stop_criteria: SC,
     cooler: C,
-    change: &'a dyn Fn(&mut S, &P),
+    change: &'a ChangeFn<S, P>,
     initial_solution: &'a S,
 }
 
@@ -23,7 +25,7 @@ where
         initial_solution: &'a S,
         stop_criteria: SC,
         cooler: C,
-        change_sol: &'a dyn Fn(&mut S, &P),
+        change_sol: &'a ChangeFn<S, P>,
     ) -> Self {
         Self {
             initial_solution,

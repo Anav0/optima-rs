@@ -1,12 +1,14 @@
 use crate::base::{Evaluation, Problem, Solution};
 
+pub type EvaluationFn<S, P> = dyn Fn(&P, &S) -> f64;
+
 #[derive(Clone, Copy)]
 pub struct Criterion<'a, P, S>
 where
     S: Solution,
 {
-    penalty: &'a dyn Fn(&P, &S) -> f64,
-    value: &'a dyn Fn(&P, &S) -> f64,
+    penalty: &'a EvaluationFn<S, P>,
+    value: &'a EvaluationFn<S, P>,
     pub is_minimization: bool,
 }
 
@@ -16,8 +18,8 @@ where
     P: Problem,
 {
     pub fn new(
-        penalty: &'a dyn Fn(&P, &S) -> f64,
-        value: &'a dyn Fn(&P, &S) -> f64,
+        penalty: &'a EvaluationFn<S, P>,
+        value: &'a EvaluationFn<S, P>,
         is_minimization: bool,
     ) -> Self {
         Self {
