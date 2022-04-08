@@ -44,11 +44,6 @@ where
             breed,
         }
     }
-    fn evaluate_population<P: Problem>(&mut self, problem: &P, criterion: &Criterion<P, S>) {
-        for specimen in self.population.iter_mut() {
-            criterion.evaluate(problem, specimen);
-        }
-    }
 }
 
 impl<S, P> OptAlgorithm<'_, P, S> for GeneticAlgorithm<'_, S>
@@ -62,10 +57,12 @@ where
 
         let mut counter = 0;
 
-        for generation in 0..self.generations {
+        for _ in 0..self.generations {
             let mut new_pop: Vec<S> = Vec::with_capacity(self.population.len());
 
-            self.evaluate_population(&problem, criterion);
+            for specimen in self.population.iter_mut() {
+                criterion.evaluate(&problem, specimen);
+            }
 
             while new_pop.len() < new_pop.capacity() {
                 let children = (self.breed)(counter, &self.population, &mut rng);
@@ -78,7 +75,9 @@ where
             self.population = new_pop;
         }
 
-        self.evaluate_population(&problem, criterion);
+        for specimen in self.population.iter_mut() {
+            criterion.evaluate(&problem, specimen);
+        }
         self.population
             .sort_by(|a, b| b.get_value().partial_cmp(&a.get_value()).unwrap());
 
