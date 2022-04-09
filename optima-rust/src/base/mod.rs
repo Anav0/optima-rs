@@ -2,7 +2,7 @@ use std::{collections::HashMap, hash::Hash};
 
 use crate::{
     annealing::{coolers::Cooler, stop::StopCriteria, ChangeFn, SimulatedAnnealing},
-    genetic::{BreedingFn, GeneticAlgorithm, MutationFn},
+    genetic::{ChangePopFn, GeneticAlgorithm, SelectionFn},
 };
 
 pub use self::criterion::Criterion;
@@ -115,15 +115,16 @@ where
 
     pub fn with_genetic(
         &mut self,
+        population_cap: usize,
         population: Vec<S>,
-        mutate: &'a MutationFn<S>,
-        breed: &'a BreedingFn<S>,
+        select: &'a SelectionFn<S>,
+        change: &'a ChangePopFn<S>,
         generations: u32,
     ) -> &mut Self {
         for id in &self.problems_soo_far {
             let genetic =
                 //TODO: get rid of clone()
-                GeneticAlgorithm::new(population.clone(), mutate, breed, generations);
+                GeneticAlgorithm::new(population_cap,population.clone(), change, select, generations);
             self.algorithms.get_mut(id).unwrap().push(Box::new(genetic));
         }
         self

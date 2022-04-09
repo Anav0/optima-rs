@@ -1,29 +1,22 @@
 use rand::{prelude::ThreadRng, thread_rng};
 
-pub mod crossover;
+pub mod selection;
 
-use crate::base::{Criterion, OptAlgorithm, Problem, Solution};
+use crate::base::{OptAlgorithm, Problem, Solution};
 
-pub trait Crosser<S: Solution> {
-    fn cross(&mut self, solution: &mut S);
-}
-
-pub trait Mutator<S: Solution> {
-    fn mutate(&mut self, solution: &mut S);
-}
-
-pub type MutationFn<S> = dyn Fn(&mut S);
-pub type BreedingFn<S> = dyn Fn(u32, &Vec<S>, &mut ThreadRng) -> [S; 2];
+pub type SelectionFn<S> = dyn Fn(usize, &Vec<S>, &mut ThreadRng) -> Vec<S>;
+pub type ChangePopFn<S> = dyn Fn(&mut Vec<S>, &mut ThreadRng);
 
 pub struct GeneticAlgorithm<'a, S>
 where
     S: Solution,
 {
     pub population: Vec<S>,
-    pub mutate: &'a MutationFn<S>,
-    pub breed: &'a BreedingFn<S>,
+    pub select: &'a SelectionFn<S>,
+    pub change: &'a ChangePopFn<S>,
     pub generations: u32,
     initial_population: Vec<S>,
+    population_cap: usize,
 }
 
 impl<'a, S> GeneticAlgorithm<'a, S>
@@ -31,17 +24,19 @@ where
     S: Solution,
 {
     pub fn new(
+        population_cap: usize,
         population: Vec<S>,
-        mutate: &'a MutationFn<S>,
-        breed: &'a BreedingFn<S>,
+        change: &'a ChangePopFn<S>,
+        select: &'a SelectionFn<S>,
         generations: u32,
     ) -> Self {
         Self {
             generations,
             initial_population: population.clone(),
             population,
-            mutate,
-            breed,
+            select,
+            change,
+            population_cap,
         }
     }
 }
@@ -52,27 +47,19 @@ where
     P: Problem,
 {
     fn solve(&mut self, problem: P, criterion: &mut crate::base::Criterion<P, S>) -> S {
-        let mutate = self.mutate;
+        let change = self.change;
+
         let mut rng = thread_rng();
 
-        let mut counter = 0;
-
         for _ in 0..self.generations {
-            let mut new_pop: Vec<S> = Vec::with_capacity(self.population.len());
+            //Select new population form the previous one
+            self.population = (self.select)(self.population_cap, &self.population, &mut rng);
+
+            (change)(&mut self.population, &mut rng);
 
             for specimen in self.population.iter_mut() {
                 criterion.evaluate(&problem, specimen);
             }
-
-            while new_pop.len() < new_pop.capacity() {
-                let children = (self.breed)(counter, &self.population, &mut rng);
-                counter += 2;
-                for mut child in children {
-                    mutate(&mut child);
-                    new_pop.push(child);
-                }
-            }
-            self.population = new_pop;
         }
 
         for specimen in self.population.iter_mut() {
