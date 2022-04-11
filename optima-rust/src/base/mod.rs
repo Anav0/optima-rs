@@ -25,6 +25,8 @@ impl Default for Evaluation {
     }
 }
 
+pub type InsightFn = dyn Fn();
+
 pub trait OptAlgorithm<'a, P, S>: Display
 where
     S: Solution,
@@ -32,6 +34,7 @@ where
 {
     fn solve(&mut self, problem: P, criterion: &mut Criterion<P, S>) -> Vec<S>;
     fn reset(&mut self);
+    // fn register_insight(&mut self, f: &InsightFn);
 }
 
 pub trait Solution: Clone {
@@ -69,7 +72,7 @@ where
         }
     }
 
-    pub fn solve(&mut self, problems: &[&'a P]) -> &mut Self {
+    pub fn solve(&mut self, problems: &[&'a P], criterions: Vec<Criterion<'a, P, S>>) -> &mut Self {
         self.problems_soo_far.clear();
         for problem in problems {
             if self.registry.contains_key(&problem.get_id()) {
@@ -77,17 +80,11 @@ where
             }
 
             self.problems_soo_far.push(problem.get_id());
-            self.registry.insert(problem.get_id(), (problem, vec![]));
+            self.registry
+                .insert(problem.get_id(), (problem, criterions.clone()));
             self.algorithms.insert(problem.get_id(), vec![]);
         }
 
-        self
-    }
-
-    pub fn use_criteria(&mut self, criterion: Criterion<'a, P, S>) -> &mut Self {
-        for id in &self.problems_soo_far {
-            self.registry.get_mut(id).unwrap().1.push(criterion.clone());
-        }
         self
     }
 
@@ -133,6 +130,12 @@ where
     pub fn run(&mut self) -> Vec<SolverResult<P, S>> {
         let mut results: Vec<SolverResult<P, S>> = Vec::new();
         for (problem_id, (problem, criterions)) in self.registry.iter_mut() {
+            if criterions.len() == 0 {
+                panic!(
+                    "No criteria was defined for problem with id: '{}'",
+                    problem_id
+                );
+            }
             let algorithms = self.algorithms.get_mut(&problem_id).unwrap();
             for alg in algorithms.iter_mut() {
                 for criterion in criterions.iter_mut() {

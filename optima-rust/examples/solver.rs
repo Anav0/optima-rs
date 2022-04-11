@@ -162,23 +162,15 @@ fn main() {
     let mut solver = Solver::new();
 
     let results = solver
-        .solve(&[&problem1, &problem2])
-        .use_criteria(criterion.clone())
+        .solve(&[&problem1, &problem2], vec![criterion.clone()])
         .with_annealing(&initial_solution, cooler, max_steps, &change_solution)
-        .solve(&[&problem3])
-        .use_criteria(criterion)
+        .solve(&[&problem3], vec![criterion])
         .with_genetic(
             pop_size,
             population,
             &|_, population, rng| roulette(population, false, rng),
             &change_population,
             100,
-        )
-        .with_annealing(
-            &initial_solution,
-            cooler,
-            not_getting_better,
-            &change_solution,
         )
         .run();
 
