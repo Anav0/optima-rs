@@ -1,14 +1,14 @@
 use self::{coolers::Cooler, stop::StopCriteria};
 use crate::base::{Criterion, OptAlgorithm, Problem, Solution};
 use rand::{prelude::ThreadRng, Rng};
-use std::f64::consts::E;
+use std::{f64::consts::E, fmt::Display};
 
 pub mod coolers;
 pub mod stop;
 
 pub type ChangeFn<S, P> = dyn Fn(&mut S, &P);
 
-pub struct SimulatedAnnealing<'a, P, S, C, SC> {
+pub struct SimulatedAnnealing<'a, P: Problem, S: Solution, C: Cooler, SC: StopCriteria> {
     stop_criteria: SC,
     cooler: C,
     change: &'a ChangeFn<S, P>,
@@ -18,6 +18,7 @@ pub struct SimulatedAnnealing<'a, P, S, C, SC> {
 impl<'a, P, S, C, SC> SimulatedAnnealing<'a, P, S, C, SC>
 where
     S: Solution,
+    P: Problem,
     C: Cooler,
     SC: StopCriteria,
 {
@@ -60,7 +61,7 @@ where
     SC: StopCriteria,
     P: Problem,
 {
-    fn solve(&mut self, problem: P, criterion: &mut Criterion<P, S>) -> S {
+    fn solve(&mut self, problem: P, criterion: &mut Criterion<P, S>) -> Vec<S> {
         self.reset();
 
         let mut rnd = rand::thread_rng();
@@ -97,11 +98,19 @@ where
 
             self.cooler.cool();
         }
-        best
+        vec![best]
     }
 
     fn reset(&mut self) {
         self.cooler.reset();
         self.stop_criteria.reset();
+    }
+}
+
+impl<'a, P: Problem, S: Solution, C: Cooler, SC: StopCriteria> Display
+    for SimulatedAnnealing<'a, P, S, C, SC>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Simulated annealing:\n{}", self.stop_criteria)
     }
 }

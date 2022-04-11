@@ -1,4 +1,6 @@
-pub trait StopCriteria: Clone {
+use std::fmt::Display;
+
+pub trait StopCriteria: Clone + Display {
     fn should_stop(&mut self, value: f64) -> bool;
     fn reset(&mut self);
 }
@@ -13,6 +15,11 @@ impl MaxSteps {
             max_steps,
             current_step: 1,
         }
+    }
+}
+impl Display for MaxSteps {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Max steps: {}", self.max_steps)
     }
 }
 impl StopCriteria for MaxSteps {
@@ -36,11 +43,11 @@ pub struct NotGettingBetter {
     found_at: u64,
     steps: u64,
     not_getting_better: u64,
-    is_minimazation: bool,
+    is_minimization: bool,
 }
 impl NotGettingBetter {
-    pub fn new(max_steps: u64, not_getting_better: u64, is_minimazation: bool) -> Self {
-        let best_value = match is_minimazation {
+    pub fn new(max_steps: u64, not_getting_better: u64, is_minimization: bool) -> Self {
+        let best_value = match is_minimization {
             true => f64::MAX,
             false => f64::MIN,
         };
@@ -50,8 +57,17 @@ impl NotGettingBetter {
             best_value,
             max_steps,
             not_getting_better,
-            is_minimazation,
+            is_minimization,
         }
+    }
+}
+impl Display for NotGettingBetter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Stop if not better for: {}\nMax steps: {}",
+            self.not_getting_better, self.max_steps
+        )
     }
 }
 impl StopCriteria for NotGettingBetter {
@@ -61,7 +77,7 @@ impl StopCriteria for NotGettingBetter {
             return true;
         };
 
-        let is_better = match self.is_minimazation {
+        let is_better = match self.is_minimization {
             true => value > self.best_value,
             false => value < self.best_value,
         };
@@ -81,7 +97,7 @@ impl StopCriteria for NotGettingBetter {
     fn reset(&mut self) {
         self.steps = 0;
         self.found_at = 0;
-        let best_value = match self.is_minimazation {
+        let best_value = match self.is_minimization {
             true => f64::MAX,
             false => f64::MIN,
         };

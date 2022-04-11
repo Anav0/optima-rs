@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use rand::{
     distributions::Uniform,
     prelude::{Distribution, ThreadRng},
@@ -150,7 +152,7 @@ where
         &mut self,
         problem: FnProblem,
         criterion: &mut Criterion<FnProblem, Particle>,
-    ) -> Particle {
+    ) -> Vec<Particle> {
         self.reset();
         self.initialize(&problem, criterion);
 
@@ -189,11 +191,23 @@ where
             }
         }
 
-        //@ Improvement: Do not clone
-        self.particles[self.best_global_index].clone()
+        self.particles.clone()
     }
 
     fn reset(&mut self) {
         self.stop_criteria.reset();
+    }
+}
+impl<SC: StopCriteria> Display for ParticleSwarm<SC> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Partical swarm: particles: {}, inertia: {}, global attr: {}, local attr: {}\n\t{}",
+            self.particles.len(),
+            self.inertia,
+            self.global_attraction,
+            self.local_attraction,
+            self.stop_criteria
+        )
     }
 }

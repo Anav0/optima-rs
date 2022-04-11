@@ -1,4 +1,4 @@
-use std::{collections::HashMap, hash::Hash};
+use std::{collections::HashMap, fmt::Display, hash::Hash};
 
 use crate::{
     annealing::{coolers::Cooler, stop::StopCriteria, ChangeFn, SimulatedAnnealing},
@@ -25,12 +25,12 @@ impl Default for Evaluation {
     }
 }
 
-pub trait OptAlgorithm<'a, P, S>
+pub trait OptAlgorithm<'a, P, S>: Display
 where
     S: Solution,
     P: Problem,
 {
-    fn solve(&mut self, problem: P, criterion: &mut Criterion<P, S>) -> S;
+    fn solve(&mut self, problem: P, criterion: &mut Criterion<P, S>) -> Vec<S>;
     fn reset(&mut self);
 }
 
@@ -130,20 +130,30 @@ where
         self
     }
 
-    pub fn run(&mut self) -> Vec<S> {
-        let mut solutions = Vec::new();
+    pub fn run(&mut self) -> Vec<SolverResult<P, S>> {
+        let mut results: Vec<SolverResult<P, S>> = Vec::new();
         for (problem_id, (problem, criterions)) in self.registry.iter_mut() {
             let algorithms = self.algorithms.get_mut(&problem_id).unwrap();
             for alg in algorithms.iter_mut() {
                 for criterion in criterions.iter_mut() {
-                    let best = alg.solve(**problem, criterion);
-                    solutions.push(best);
+                    let result = SolverResult {
+                        algorithm: alg.to_string(),
+                        problem: *problem,
+                        solutions: alg.solve(**problem, criterion),
+                    };
+                    results.push(result)
                 }
             }
         }
-        solutions
+        results
     }
 }
 pub trait Problem: Clone + Copy {
     fn get_id(&self) -> u32;
+}
+
+pub struct SolverResult<'a, P: Problem, S: Solution> {
+    pub algorithm: String,
+    pub solutions: Vec<S>,
+    pub problem: &'a P,
 }

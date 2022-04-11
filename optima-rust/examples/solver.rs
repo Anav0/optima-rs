@@ -153,19 +153,22 @@ fn main() {
 
     let criterion = Criterion::new(&penalty, &value, false);
     let cooler = QuadraticCooler::new(1000.0, 0.997);
-    let max_steps = MaxSteps::new(10000);
-    let not_getting_better = NotGettingBetter::new(100000, 100, false);
+    let max_steps = MaxSteps::new(20000);
+    let not_getting_better = NotGettingBetter::new(20000, 100, false);
 
-    let population = random_population(10, weights.len());
+    let pop_size = 10;
+    let population = random_population(pop_size, weights.len());
 
-    let best = Solver::new()
+    let mut solver = Solver::new();
+
+    let results = solver
         .solve(&[&problem1, &problem2])
         .use_criteria(criterion.clone())
         .with_annealing(&initial_solution, cooler, max_steps, &change_solution)
         .solve(&[&problem3])
         .use_criteria(criterion)
         .with_genetic(
-            population.len(),
+            pop_size,
             population,
             &|_, population, rng| roulette(population, false, rng),
             &change_population,
@@ -179,7 +182,27 @@ fn main() {
         )
         .run();
 
-    for sol in &best {
-        println!("{:?}", sol);
+    for result in &results {
+        println!(
+            "-----\nProblem id: {}\n{}\nSolutions:",
+            result.problem.id, result.algorithm
+        );
+
+        for sol in &result.solutions {
+            let mut bits: Vec<u8> = vec![];
+            for b in &sol.picked_items {
+                if *b {
+                    bits.push(1);
+                } else {
+                    bits.push(0)
+                }
+            }
+            println!(
+                "\t{}, {:>?} value: {}",
+                sol.get_eval().is_feasible,
+                bits,
+                sol.get_value()
+            );
+        }
     }
 }

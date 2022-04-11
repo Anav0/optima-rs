@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use rand::{prelude::ThreadRng, thread_rng};
 
 pub mod selection;
@@ -46,16 +48,14 @@ where
     S: Solution,
     P: Problem,
 {
-    fn solve(&mut self, problem: P, criterion: &mut crate::base::Criterion<P, S>) -> S {
-        let change = self.change;
-
+    fn solve(&mut self, problem: P, criterion: &mut crate::base::Criterion<P, S>) -> Vec<S> {
         let mut rng = thread_rng();
 
         for _ in 0..self.generations {
             //Select new population form the previous one
             self.population = (self.select)(self.population_cap, &self.population, &mut rng);
 
-            (change)(&mut self.population, &mut rng);
+            (self.change)(&mut self.population, &mut rng);
 
             for specimen in self.population.iter_mut() {
                 criterion.evaluate(&problem, specimen);
@@ -68,10 +68,20 @@ where
         self.population
             .sort_by(|a, b| b.get_value().partial_cmp(&a.get_value()).unwrap());
 
-        self.population[0].clone()
+        self.population.clone()
     }
 
     fn reset(&mut self) {
         self.population = self.initial_population.clone();
+    }
+}
+
+impl<'a, S: Solution> Display for GeneticAlgorithm<'a, S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Genetic algorithm\nInitial pop size: {}",
+            self.initial_population.len()
+        )
     }
 }

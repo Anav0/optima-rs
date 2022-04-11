@@ -49,7 +49,9 @@ fn main() {
 
         let mut criterion = Criterion::new(&|_, _| 0.0, &value_fn, true);
 
-        let best = swarm.solve(problem, &mut criterion);
+        let particles = swarm.solve(problem, &mut criterion);
+        let best = &particles[0];
+
         println!(
             "{}({}, {} = {}), Known smallest value: {}({}, {}) = {}",
             bench.name,
