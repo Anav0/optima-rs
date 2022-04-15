@@ -13,6 +13,8 @@ use crate::{
     },
 };
 
+pub type SwarmInsightFn = dyn Fn(&FnProblem, &Vec<Particle>);
+
 #[solution_attr]
 #[derive(Clone, DerivedSolution)]
 pub struct Particle {
@@ -68,7 +70,7 @@ impl Problem for FnProblem {
     }
 }
 
-pub struct ParticleSwarm<SC: StopCriteria> {
+pub struct ParticleSwarm<'a, SC: StopCriteria> {
     pub particles: Vec<Particle>,
     best_global_index: usize,
     stop_criteria: SC,
@@ -76,9 +78,10 @@ pub struct ParticleSwarm<SC: StopCriteria> {
     global_attraction: f64,
     inertia: f64,
     rng: ThreadRng,
+    insight: Option<&'a SwarmInsightFn>,
 }
 
-impl<'a, SC> ParticleSwarm<SC>
+impl<'a, SC> ParticleSwarm<'a, SC>
 where
     SC: StopCriteria,
 {
@@ -91,8 +94,13 @@ where
             global_attraction: 0.5,
             local_attraction: 0.5,
             inertia: 0.05,
+            insight: None,
             rng,
         }
+    }
+
+    pub fn register_insight(&mut self, f: &'a SwarmInsightFn) {
+        self.insight = Some(f);
     }
 
     fn reset(&mut self) {
@@ -144,7 +152,7 @@ where
     }
 }
 
-impl<'b, SC> OptAlgorithm<'b, FnProblem, Particle> for ParticleSwarm<SC>
+impl<'a, SC> OptAlgorithm<'a, FnProblem, Particle> for ParticleSwarm<'a, SC>
 where
     SC: StopCriteria,
 {
@@ -189,6 +197,10 @@ where
                     self.best_global_index = i;
                 }
             }
+            match self.insight {
+                Some(f) => f(&problem, &self.particles),
+                _ => {}
+            }
         }
 
         self.particles.clone()
@@ -198,7 +210,8 @@ where
         self.stop_criteria.reset();
     }
 }
-impl<SC: StopCriteria> Display for ParticleSwarm<SC> {
+
+impl<'a, SC: StopCriteria> Display for ParticleSwarm<'a, SC> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,

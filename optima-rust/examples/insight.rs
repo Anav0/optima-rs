@@ -1,11 +1,13 @@
 use optima_rust::{
+    analysis::{AsCsvRow, CsvSaver},
     annealing::{
+        self,
         coolers::QuadraticCooler,
         stop::{MaxSteps, NotGettingBetter},
+        SimulatedAnnealing,
     },
     base::{
         solution_attr, Criterion, DerivedSolution, Evaluation, OptAlgorithm, Problem, Solution,
-        Solver,
     },
     genetic::selection::{roulette, tournament},
 };
@@ -140,6 +142,11 @@ impl<'a> Problem for KnapsackProblem<'a> {
         self.id
     }
 }
+impl AsCsvRow for KnapsackSolution {
+    fn as_row(&self, i: usize) -> String {
+        format!("{},{}", i, self.get_value())
+    }
+}
 
 fn main() {
     let weights = vec![1.0, 2.0, 3.0, 8.0, 12.0, 20.0, 30.0];
@@ -149,52 +156,45 @@ fn main() {
     let initial_solution = KnapsackSolution::random_init(0, weights.len());
     let problem1 = KnapsackProblem::new(0, &weights, &values, capacity);
     let problem2 = KnapsackProblem::new(1, &weights, &values, capacity);
-    let problem3 = KnapsackProblem::new(3, &weights, &values, capacity);
 
-    let criterion = Criterion::new(&penalty, &value, false);
+    let mut criterion = Criterion::new(&penalty, &value, false);
     let cooler = QuadraticCooler::new(1000.0, 0.997);
     let max_steps = MaxSteps::new(20000);
-    let not_getting_better = NotGettingBetter::new(20000, 100, false);
 
-    let pop_size = 10;
-    let population = random_population(pop_size, weights.len());
-
-    let mut solver = Solver::new();
-
-    let results = solver
-        .solve(&[&problem1, &problem2], vec![criterion.clone()])
-        .with_annealing(&initial_solution, cooler, max_steps, &change_solution)
-        .solve(&[&problem3], vec![criterion])
-        .with_genetic(
-            pop_size,
-            population,
-            &|_, population, rng| roulette(population, false, rng),
-            &change_population,
-            100,
-        )
-        .run();
-
-    for result in &results {
-        println!(
-            "-----\nProblem id: {}\n{}\nSolutions:",
-            result.problem.id, result.algorithm
-        );
-
-        for sol in &result.solutions {
-            let mut bits: Vec<u8> = vec![];
-            for b in &sol.picked_items {
-                if *b {
-                    bits.push(1);
-                } else {
-                    bits.push(0)
-                }
-            }
-            println!(
-                "\t{}, {:>?} value: {}",
-                sol.get_eval().is_feasible,
-                bits,
-                sol.get_value()
-            );
+    let header = String::from("iter,value");
+    let mut prev_problem_id = u32::MAX;
+    let mut csv = CsvSaver::new(String::from("./0.csv"), header);
+    let mut insight = move |_: u32,
+                            problem: &KnapsackProblem,
+                            best: &KnapsackSolution,
+                            _: &KnapsackSolution,
+                            last_call: bool| {
+        if last_call {
+            csv.flush();
+            return;
         }
-    }
+
+        let id = problem.get_id();
+        if id != prev_problem_id {
+            csv.flush();
+            let file = format!("./{}.csv", problem.get_id());
+            csv.reset(file, None);
+        }
+        prev_problem_id = id;
+        csv.save_element(best);
+    };
+
+    let mut annealing = SimulatedAnnealing::new(
+        &initial_solution,
+        max_steps,
+        cooler,
+        &change_solution,
+        &mut insight,
+    );
+
+    let mut solutions = vec![];
+
+    solutions.push(annealing.solve(problem1, &mut criterion));
+    println!();
+    solutions.push(annealing.solve(problem2, &mut criterion));
 }

@@ -7,12 +7,14 @@ pub mod coolers;
 pub mod stop;
 
 pub type ChangeFn<S, P> = dyn Fn(&mut S, &P);
+pub type AnnealingFn<S, P> = dyn FnMut(u32, &P, &S, &S, bool);
 
 pub struct SimulatedAnnealing<'a, P: Problem, S: Solution, C: Cooler, SC: StopCriteria> {
     stop_criteria: SC,
     cooler: C,
     change: &'a ChangeFn<S, P>,
     initial_solution: &'a S,
+    insight: &'a mut AnnealingFn<S, P>,
 }
 
 impl<'a, P, S, C, SC> SimulatedAnnealing<'a, P, S, C, SC>
@@ -26,15 +28,18 @@ where
         initial_solution: &'a S,
         stop_criteria: SC,
         cooler: C,
-        change_sol: &'a ChangeFn<S, P>,
+        change: &'a ChangeFn<S, P>,
+        insight: &'a mut AnnealingFn<S, P>,
     ) -> Self {
         Self {
             initial_solution,
             stop_criteria,
             cooler,
-            change: change_sol,
+            change,
+            insight,
         }
     }
+
     fn hot_enough_to_swap(
         &self,
         rnd: &mut ThreadRng,
@@ -74,6 +79,7 @@ where
         let change = self.change;
 
         //Main loop
+        let mut counter = 0;
         while !self.stop_criteria.should_stop(solution.get_value()) {
             //Save current state and then change and evaluate it
             let before = solution.clone();
@@ -95,9 +101,12 @@ where
             } else {
                 solution = before.clone();
             }
-
+            (self.insight)(counter, &problem, &best, &solution, false);
+            counter += 1;
             self.cooler.cool();
         }
+        (self.insight)(counter, &problem, &best, &solution, true);
+
         vec![best]
     }
 

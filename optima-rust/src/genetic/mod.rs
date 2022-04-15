@@ -8,6 +8,7 @@ use crate::base::{OptAlgorithm, Problem, Solution};
 
 pub type SelectionFn<S> = dyn Fn(usize, &Vec<S>, &mut ThreadRng) -> Vec<S>;
 pub type ChangePopFn<S> = dyn Fn(&mut Vec<S>, &mut ThreadRng);
+pub type GeneticInsightFn<S> = dyn Fn(u32, &Vec<S>);
 
 pub struct GeneticAlgorithm<'a, S>
 where
@@ -19,6 +20,7 @@ where
     pub generations: u32,
     initial_population: Vec<S>,
     population_cap: usize,
+    insight: Option<&'a GeneticInsightFn<S>>,
 }
 
 impl<'a, S> GeneticAlgorithm<'a, S>
@@ -31,6 +33,7 @@ where
         change: &'a ChangePopFn<S>,
         select: &'a SelectionFn<S>,
         generations: u32,
+        insight: Option<&'a GeneticInsightFn<S>>,
     ) -> Self {
         Self {
             generations,
@@ -39,7 +42,12 @@ where
             select,
             change,
             population_cap,
+            insight,
         }
+    }
+
+    pub fn register_insight(&mut self, insight: &'a GeneticInsightFn<S>) {
+        self.insight = Some(insight);
     }
 }
 
@@ -51,7 +59,7 @@ where
     fn solve(&mut self, problem: P, criterion: &mut crate::base::Criterion<P, S>) -> Vec<S> {
         let mut rng = thread_rng();
 
-        for _ in 0..self.generations {
+        for generation in 0..self.generations {
             //Select new population form the previous one
             self.population = (self.select)(self.population_cap, &self.population, &mut rng);
 
@@ -59,6 +67,11 @@ where
 
             for specimen in self.population.iter_mut() {
                 criterion.evaluate(&problem, specimen);
+            }
+
+            match self.insight {
+                Some(f) => f(generation, &self.population),
+                _ => {}
             }
         }
 
