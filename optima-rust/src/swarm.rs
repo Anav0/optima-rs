@@ -64,11 +64,7 @@ impl FnProblem {
     }
 }
 
-impl Problem for FnProblem {
-    fn get_id(&self) -> u32 {
-        self.id
-    }
-}
+impl Problem for FnProblem {}
 
 pub struct ParticleSwarm<'a, SC: StopCriteria> {
     pub particles: Vec<Particle>,

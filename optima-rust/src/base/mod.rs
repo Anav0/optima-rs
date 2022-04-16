@@ -42,6 +42,4 @@ pub enum State {
     BeforeChange,
 }
 
-pub trait Problem: Clone + Copy {
-    fn get_id(&self) -> u32;
-}
+pub trait Problem {}

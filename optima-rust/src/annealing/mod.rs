@@ -6,7 +6,7 @@ use std::{f64::consts::E, fmt::Display};
 pub mod coolers;
 pub mod stop;
 
-pub type ChangeFn<S, P> = dyn Fn(&mut S, &P);
+pub type ChangeFn<S, P> = dyn Fn(&mut S, &P, &mut ThreadRng);
 pub type AnnealingInsightFn<S, P> = dyn FnMut(u32, &P, &S, &S, bool);
 
 pub struct SimulatedAnnealing<'a, P: Problem, S: Solution, C: Cooler, SC: StopCriteria> {
@@ -86,7 +86,7 @@ where
         while !self.stop_criteria.should_stop(solution.get_value()) {
             //Save current state and then change and evaluate it
             let before = solution.clone();
-            (change)(&mut solution, &problem);
+            (change)(&mut solution, &problem, &mut rnd);
             criterion.evaluate(&problem, &mut solution);
 
             let best_eval = best.get_eval();

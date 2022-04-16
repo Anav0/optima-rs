@@ -79,11 +79,7 @@ impl<'a> KnapsackProblem<'a> {
         }
     }
 }
-impl<'a> Problem for KnapsackProblem<'a> {
-    fn get_id(&self) -> u32 {
-        self.id
-    }
-}
+impl<'a> Problem for KnapsackProblem<'a> {}
 impl AsCsvRow for KnapsackSolution {
     fn as_row(&self, i: usize) -> String {
         format!("{},{}", i, self.get_value())
@@ -116,13 +112,12 @@ fn main() {
             return;
         }
 
-        let id = problem.get_id();
-        if id != prev_problem_id {
+        if problem.id != prev_problem_id {
             csv.flush();
-            let file = format!("./{}.csv", problem.get_id());
+            let file = format!("./problem{}.csv", problem.id);
             csv.reset(file, None);
         }
-        prev_problem_id = id;
+        prev_problem_id = problem.id;
         csv.save_element(best);
     };
 

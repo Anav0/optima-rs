@@ -111,26 +111,21 @@ fn random_population(size: usize, num_items: usize) -> Vec<KnapsackSolution> {
 
 #[derive(Clone, Copy)]
 pub struct KnapsackProblem<'a> {
-    id: u32,
     pub weights: &'a Vec<f64>,
     pub values: &'a Vec<f64>,
     pub capacity: f64,
 }
 impl<'a> KnapsackProblem<'a> {
-    pub fn new(id: u32, weights: &'a Vec<f64>, values: &'a Vec<f64>, capacity: f64) -> Self {
+    pub fn new(weights: &'a Vec<f64>, values: &'a Vec<f64>, capacity: f64) -> Self {
         Self {
-            id,
             weights,
             values,
             capacity,
         }
     }
 }
-impl<'a> Problem for KnapsackProblem<'a> {
-    fn get_id(&self) -> u32 {
-        self.id
-    }
-}
+impl<'a> Problem for KnapsackProblem<'a> {}
+
 impl AsCsvRow for KnapsackSolution {
     fn as_row(&self, i: usize) -> String {
         format!("{},{}", i, self.get_value())
@@ -142,7 +137,7 @@ fn main() {
     let values = vec![4.0, 5.0, 1.0, 2.0, 8.0, 5.0, 6.0];
     let capacity = 6.0;
 
-    let problem = KnapsackProblem::new(0, &weights, &values, capacity);
+    let problem = KnapsackProblem::new(&weights, &values, capacity);
 
     let mut criterion = Criterion::new(&penalty, &value, false);
 
