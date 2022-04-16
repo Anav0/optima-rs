@@ -7,14 +7,14 @@ pub mod coolers;
 pub mod stop;
 
 pub type ChangeFn<S, P> = dyn Fn(&mut S, &P);
-pub type AnnealingFn<S, P> = dyn FnMut(u32, &P, &S, &S, bool);
+pub type AnnealingInsightFn<S, P> = dyn FnMut(u32, &P, &S, &S, bool);
 
 pub struct SimulatedAnnealing<'a, P: Problem, S: Solution, C: Cooler, SC: StopCriteria> {
     stop_criteria: SC,
     cooler: C,
     change: &'a ChangeFn<S, P>,
     initial_solution: &'a S,
-    insight: &'a mut AnnealingFn<S, P>,
+    insight: &'a mut AnnealingInsightFn<S, P>,
 }
 
 impl<'a, P, S, C, SC> SimulatedAnnealing<'a, P, S, C, SC>
@@ -29,7 +29,7 @@ where
         stop_criteria: SC,
         cooler: C,
         change: &'a ChangeFn<S, P>,
-        insight: &'a mut AnnealingFn<S, P>,
+        insight: &'a mut AnnealingInsightFn<S, P>,
     ) -> Self {
         Self {
             initial_solution,

@@ -1,13 +1,9 @@
-use std::fmt::Display;
-
 use rand::{
     distributions::{Uniform, WeightedIndex},
     prelude::{Distribution, ThreadRng},
 };
 
 use crate::base::Solution;
-
-use super::GeneticAlgorithm;
 
 pub fn roulette<S: Solution>(
     population: &Vec<S>,
@@ -61,7 +57,7 @@ pub fn tournament<S: Solution>(
     population: &Vec<S>,
     is_minimization: bool,
     rng: &mut ThreadRng,
-    keep_elite: u8,
+    _keep_elite: u8,
 ) -> Vec<S> {
     let mut new_population = Vec::with_capacity(population.len());
     let dist = Uniform::new(0, population.len());
@@ -91,4 +87,3 @@ pub fn tournament<S: Solution>(
 
     new_population
 }
-

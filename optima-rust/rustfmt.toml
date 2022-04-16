@@ -1,0 +1,4 @@
+imports_indent = "visual"
+imports_layout = "HorizontalVertical"
+merge_imports = true
+imports_granularity="Crate"

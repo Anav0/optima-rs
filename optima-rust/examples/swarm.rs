@@ -1,5 +1,5 @@
 use optima_rust::{
-    annealing::stop::{MaxSteps, StopCriteria},
+    annealing::stop::MaxSteps,
     base::{Criterion, OptAlgorithm, Solution},
     swarm::{FnProblem, Particle, ParticleSwarm},
 };
@@ -45,7 +45,7 @@ fn main() {
     for bench in benches {
         let problem = FnProblem::new(0, bench.max, bench.min);
 
-        let value_fn = |problem: &FnProblem, part: &Particle| (bench.func)(part.x, part.y);
+        let value_fn = |_problem: &FnProblem, part: &Particle| (bench.func)(part.x, part.y);
 
         let mut criterion = Criterion::new(&|_, _| 0.0, &value_fn, true);
 

@@ -1,21 +1,11 @@
 use optima_rust::{
     analysis::{AsCsvRow, CsvSaver},
-    annealing::{
-        self,
-        coolers::QuadraticCooler,
-        stop::{MaxSteps, NotGettingBetter},
-        SimulatedAnnealing,
-    },
+    annealing::{coolers::QuadraticCooler, stop::MaxSteps, SimulatedAnnealing},
     base::{
         solution_attr, Criterion, DerivedSolution, Evaluation, OptAlgorithm, Problem, Solution,
     },
-    genetic::selection::{roulette, tournament},
 };
-use rand::{
-    distributions::Uniform,
-    prelude::{Distribution, ThreadRng},
-    random, thread_rng, Rng,
-};
+use rand::{prelude::ThreadRng, random, thread_rng, Rng};
 
 pub type CrossFn<S> = dyn Fn(&S, &S, &mut ThreadRng) -> Vec<S>;
 
@@ -72,54 +62,6 @@ fn change_solution(solution: &mut KnapsackSolution, _problem: &KnapsackProblem) 
     solution.picked_items[random_index] = !solution.picked_items[random_index];
 }
 
-fn change_population(population: &mut Vec<KnapsackSolution>, rng: &mut ThreadRng) {
-    let uniform = Uniform::new(0, population.len());
-    let mut children = Vec::with_capacity(population.len());
-
-    while children.len() < population.len() {
-        let father = &population[uniform.sample(rng)];
-        let mather = &population[uniform.sample(rng)];
-
-        let cross_point = rng.gen_range(1..father.picked_items.len());
-
-        let from_father = father.picked_items[..cross_point].to_vec();
-        let from_mather = mather.picked_items[cross_point..].to_vec();
-
-        let child_a_picked_items = vec![from_father, from_mather].concat();
-
-        let from_mather = mather.picked_items[..cross_point].to_vec();
-        let from_father = father.picked_items[cross_point..].to_vec();
-
-        let child_b_picked_items = vec![from_mather, from_father].concat();
-
-        let child_a = KnapsackSolution::new(child_a_picked_items);
-        let child_b = KnapsackSolution::new(child_b_picked_items);
-
-        children.push(child_a);
-        children.push(child_b);
-    }
-
-    let mutate_rate = 0.5;
-    for i in 0..population.len() {
-        let child = &mut children[i];
-        for j in 0..child.picked_items.len() {
-            if random::<f64>() < mutate_rate {
-                child.picked_items[j] = !child.picked_items[j];
-            }
-        }
-        population[i] = child.clone();
-    }
-}
-
-fn random_population(size: usize, num_items: usize) -> Vec<KnapsackSolution> {
-    let mut population = Vec::with_capacity(size);
-    for i in 0..size {
-        let specimen = KnapsackSolution::random_init(i as u32, num_items);
-        population.push(specimen);
-    }
-
-    population
-}
 #[derive(Clone, Copy)]
 pub struct KnapsackProblem<'a> {
     id: u32,
