@@ -14,7 +14,7 @@ pub struct SimulatedAnnealing<'a, P: Problem, S: Solution, C: Cooler, SC: StopCr
     cooler: C,
     change: &'a ChangeFn<S, P>,
     initial_solution: &'a S,
-    insight: &'a mut AnnealingInsightFn<S, P>,
+    insight: Option<&'a mut AnnealingInsightFn<S, P>>,
 }
 
 impl<'a, P, S, C, SC> SimulatedAnnealing<'a, P, S, C, SC>
@@ -29,15 +29,18 @@ where
         stop_criteria: SC,
         cooler: C,
         change: &'a ChangeFn<S, P>,
-        insight: &'a mut AnnealingInsightFn<S, P>,
     ) -> Self {
         Self {
             initial_solution,
             stop_criteria,
             cooler,
             change,
-            insight,
+            insight: None,
         }
+    }
+
+    pub fn register_insight(&mut self, insight: &'a mut AnnealingInsightFn<S, P>) {
+        self.insight = Some(insight);
     }
 
     fn hot_enough_to_swap(
@@ -101,11 +104,18 @@ where
             } else {
                 solution = before.clone();
             }
-            (self.insight)(counter, &problem, &best, &solution, false);
+            match &mut self.insight {
+                Some(f) => f(counter, &problem, &best, &solution, false),
+                _ => {}
+            }
             counter += 1;
             self.cooler.cool();
         }
-        (self.insight)(counter, &problem, &best, &solution, true);
+
+        match &mut self.insight {
+            Some(f) => f(counter, &problem, &best, &solution, true),
+            _ => {}
+        }
 
         vec![best]
     }

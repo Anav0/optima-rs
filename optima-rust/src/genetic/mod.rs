@@ -20,7 +20,7 @@ where
     pub generations: u32,
     initial_population: Vec<S>,
     population_cap: usize,
-    insight: Option<&'a GeneticInsightFn<S>>,
+    insight: Option<&'a mut GeneticInsightFn<S>>,
 }
 
 impl<'a, S> GeneticAlgorithm<'a, S>
@@ -33,7 +33,7 @@ where
         change: &'a ChangePopFn<S>,
         select: &'a SelectionFn<S>,
         generations: u32,
-        insight: Option<&'a GeneticInsightFn<S>>,
+        insight: Option<&'a mut GeneticInsightFn<S>>,
     ) -> Self {
         Self {
             generations,
@@ -46,7 +46,7 @@ where
         }
     }
 
-    pub fn register_insight(&mut self, insight: &'a GeneticInsightFn<S>) {
+    pub fn register_insight(&mut self, insight: &'a mut GeneticInsightFn<S>) {
         self.insight = Some(insight);
     }
 }
@@ -69,7 +69,7 @@ where
                 criterion.evaluate(&problem, specimen);
             }
 
-            match self.insight {
+            match &mut self.insight {
                 Some(f) => f(generation, &self.population),
                 _ => {}
             }

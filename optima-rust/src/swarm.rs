@@ -78,7 +78,7 @@ pub struct ParticleSwarm<'a, SC: StopCriteria> {
     global_attraction: f64,
     inertia: f64,
     rng: ThreadRng,
-    insight: Option<&'a SwarmInsightFn>,
+    insight: Option<&'a mut SwarmInsightFn>,
 }
 
 impl<'a, SC> ParticleSwarm<'a, SC>
@@ -99,7 +99,7 @@ where
         }
     }
 
-    pub fn register_insight(&mut self, f: &'a SwarmInsightFn) {
+    pub fn register_insight(&mut self, f: &'a mut SwarmInsightFn) {
         self.insight = Some(f);
     }
 
@@ -197,7 +197,7 @@ where
                     self.best_global_index = i;
                 }
             }
-            match self.insight {
+            match &mut self.insight {
                 Some(f) => f(&problem, &self.particles),
                 _ => {}
             }

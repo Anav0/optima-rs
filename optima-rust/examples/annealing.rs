@@ -126,13 +126,10 @@ fn main() {
         csv.save_element(best);
     };
 
-    let mut annealing = SimulatedAnnealing::new(
-        &initial_solution,
-        max_steps,
-        cooler,
-        &change_solution,
-        &mut insight,
-    );
+    let mut annealing =
+        SimulatedAnnealing::new(&initial_solution, max_steps, cooler, &change_solution);
+
+    annealing.register_insight(&mut insight);
 
     let mut solutions = vec![];
 
