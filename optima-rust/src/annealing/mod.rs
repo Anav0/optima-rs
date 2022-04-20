@@ -7,14 +7,14 @@ pub mod coolers;
 pub mod stop;
 
 pub type ChangeFn<S, P> = dyn Fn(&mut S, &P, &mut ThreadRng);
-pub type AnnealingInsightFn<S, P> = dyn FnMut(u32, &P, &S, &S, bool);
+pub type AnnealingInsightFn<S, P, C> = dyn FnMut(&C, u32, &P, &S, &S, bool);
 
 pub struct SimulatedAnnealing<'a, P: Problem, S: Solution, C: Cooler, SC: StopCriteria> {
     stop_criteria: SC,
     cooler: C,
     change: &'a ChangeFn<S, P>,
     initial_solution: &'a S,
-    insight: Option<&'a mut AnnealingInsightFn<S, P>>,
+    insight: Option<&'a mut AnnealingInsightFn<S, P, C>>,
 }
 
 impl<'a, P, S, C, SC> SimulatedAnnealing<'a, P, S, C, SC>
@@ -39,7 +39,7 @@ where
         }
     }
 
-    pub fn register_insight(&mut self, insight: &'a mut AnnealingInsightFn<S, P>) {
+    pub fn register_insight(&mut self, insight: &'a mut AnnealingInsightFn<S, P, C>) {
         self.insight = Some(insight);
     }
 
@@ -105,7 +105,7 @@ where
                 solution = before.clone();
             }
             match &mut self.insight {
-                Some(f) => f(counter, &problem, &best, &solution, false),
+                Some(f) => f(&self.cooler, counter, &problem, &best, &solution, false),
                 _ => {}
             }
             counter += 1;
@@ -113,7 +113,7 @@ where
         }
 
         match &mut self.insight {
-            Some(f) => f(counter, &problem, &best, &solution, true),
+            Some(f) => f(&self.cooler, counter, &problem, &best, &solution, true),
             _ => {}
         }
 

@@ -14,8 +14,13 @@ pub struct CsvSaver {
 }
 
 impl CsvSaver {
-    pub fn save_element(&mut self, row: &dyn AsCsvRow) {
-        self.rows.push(row.as_row(self.rows.len()));
+    pub fn save_element(&mut self, row: &dyn AsCsvRow, additional: Option<&str>) {
+        let row = row.as_row(self.rows.len());
+        if additional.is_some() {
+            self.rows.push(format!("{},{}", row, additional.unwrap()));
+        } else {
+            self.rows.push(row);
+        }
     }
 
     pub fn flush(&mut self) {

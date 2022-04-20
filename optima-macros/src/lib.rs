@@ -8,6 +8,7 @@ use syn::{parse::Parser, parse_macro_input, DeriveInput, Error};
 pub fn solution_derive(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
 
+    // println!("{:#?}", &ast);
     let name = &ast.ident;
 
     quote! {
