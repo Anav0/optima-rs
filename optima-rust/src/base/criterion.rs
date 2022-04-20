@@ -84,11 +84,7 @@ mod tests {
 
     #[derive(Clone, Copy)]
     struct TestProblem;
-    impl Problem for TestProblem {
-        fn get_id(&self) -> u32 {
-            1
-        }
-    }
+    impl Problem for TestProblem {}
 
     #[test]
     fn evaluate_penalty_evaluated_correctly() {

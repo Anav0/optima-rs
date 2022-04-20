@@ -1,3 +1,5 @@
+use std::thread::Thread;
+
 use optima_rust::{
     analysis::{AsCsvRow, CsvSaver},
     annealing::{coolers::QuadraticCooler, stop::MaxSteps, SimulatedAnnealing},
@@ -56,7 +58,11 @@ pub fn penalty(problem: &KnapsackProblem, current: &KnapsackSolution) -> f64 {
     }
 }
 
-fn change_solution(solution: &mut KnapsackSolution, _problem: &KnapsackProblem) {
+fn change_solution(
+    solution: &mut KnapsackSolution,
+    _problem: &KnapsackProblem,
+    rng: &mut ThreadRng,
+) {
     let mut rng = thread_rng();
     let random_index: usize = rng.gen_range(0..solution.picked_items.len());
     solution.picked_items[random_index] = !solution.picked_items[random_index];
