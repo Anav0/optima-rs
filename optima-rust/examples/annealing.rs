@@ -63,7 +63,6 @@ fn change_solution(
     _problem: &KnapsackProblem,
     rng: &mut ThreadRng,
 ) {
-    let mut rng = thread_rng();
     let random_index: usize = rng.gen_range(0..solution.picked_items.len());
     solution.picked_items[random_index] = !solution.picked_items[random_index];
 }

@@ -7,13 +7,13 @@ pub trait StopCriteria: Clone + Display {
 #[derive(Clone, Copy)]
 pub struct MaxSteps {
     max_steps: usize,
-    current_step: usize,
+    steps: usize,
 }
 impl MaxSteps {
     pub fn new(max_steps: usize) -> Self {
         Self {
             max_steps,
-            current_step: 1,
+            steps: 0,
         }
     }
 }
@@ -24,15 +24,15 @@ impl Display for MaxSteps {
 }
 impl StopCriteria for MaxSteps {
     fn should_stop(&mut self, _value: f64) -> bool {
-        if self.current_step >= self.max_steps {
+        if self.steps > self.max_steps {
             return true;
         }
-        self.current_step += 1;
+        self.steps += 1;
         false
     }
 
     fn reset(&mut self) {
-        self.current_step = 1;
+        self.steps = 0;
     }
 }
 
@@ -78,8 +78,8 @@ impl StopCriteria for NotGettingBetter {
         };
 
         let is_better = match self.is_minimization {
-            true => value > self.best_value,
-            false => value < self.best_value,
+            true => value < self.best_value,
+            false => value > self.best_value,
         };
 
         if is_better {
@@ -87,7 +87,7 @@ impl StopCriteria for NotGettingBetter {
             self.found_at = self.steps;
         }
 
-        if self.steps - self.found_at > self.not_getting_better {
+        if self.steps - self.found_at >= self.not_getting_better {
             return true;
         };
 
@@ -102,5 +102,75 @@ impl StopCriteria for NotGettingBetter {
             false => f64::MIN,
         };
         self.best_value = best_value;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::annealing::stop::StopCriteria;
+
+    use super::NotGettingBetter;
+
+    #[test]
+    fn not_getting_better_should_stop_stops_after_max() {
+        let max = 100;
+        let not_getting_better = 10;
+        let mut should_stop = NotGettingBetter::new(max, not_getting_better, false);
+
+        let mut counter = 0;
+        let mut value = 0.0;
+
+        while !should_stop.should_stop(value) {
+            value += 1.0;
+            counter += 1;
+        }
+
+        assert_eq!(counter, max);
+    }
+
+    #[test]
+    fn not_getting_better_should_stop_stops_if_not_better() {
+        let max = 100;
+        let not_getting_better = 10;
+        let mut should_stop = NotGettingBetter::new(max, not_getting_better, false);
+
+        let mut counter = 0;
+        let value = 0.0;
+
+        while !should_stop.should_stop(value) {
+            counter += 1;
+        }
+
+        assert_eq!(counter, not_getting_better);
+    }
+    #[test]
+    fn not_getting_better_reset_resets() {
+        let max = 100;
+        let not_getting_better = 10;
+        let mut should_stop = NotGettingBetter::new(max, not_getting_better, false);
+
+        let mut value = 0.0;
+
+        while !should_stop.should_stop(value) {
+            value += 1.0;
+        }
+
+        should_stop.reset();
+
+        assert_eq!(should_stop.found_at, 0);
+        assert_eq!(should_stop.best_value, f64::MIN);
+        assert_eq!(should_stop.max_steps, max);
+        assert_eq!(should_stop.not_getting_better, not_getting_better);
+        assert_eq!(should_stop.steps, 0);
+    }
+
+    #[test]
+    fn not_getting_better_initializes_best_value_correctly() {
+        let max = 100;
+        let not_getting_better = 10;
+        let mut should_stop = NotGettingBetter::new(max, not_getting_better, false);
+        assert_eq!(should_stop.best_value, f64::MIN);
+        should_stop = NotGettingBetter::new(max, not_getting_better, true);
+        assert_eq!(should_stop.best_value, f64::MAX);
     }
 }
