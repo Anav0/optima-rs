@@ -111,8 +111,8 @@ fn random_population(size: usize, num_items: usize) -> Vec<KnapsackSolution> {
 
 #[derive(Clone, Copy)]
 pub struct KnapsackProblem<'a> {
-    pub weights: &'a Vec<f64>,
-    pub values: &'a Vec<f64>,
+    pub weights:  &'a Vec<f64>,
+    pub values:   &'a Vec<f64>,
     pub capacity: f64,
 }
 impl<'a> KnapsackProblem<'a> {
@@ -134,7 +134,7 @@ impl AsCsvRow for KnapsackSolution {
 
 fn main() {
     let weights = vec![1.0, 2.0, 3.0, 8.0, 12.0, 20.0, 30.0];
-    let values = vec![4.0, 5.0, 1.0, 2.0, 8.0, 5.0, 6.0];
+    let values  = vec![4.0, 5.0, 1.0, 2.0, 8.0, 5.0, 6.0];
     let capacity = 6.0;
 
     let problem = KnapsackProblem::new(&weights, &values, capacity);

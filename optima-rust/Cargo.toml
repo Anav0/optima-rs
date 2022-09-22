@@ -9,7 +9,3 @@ edition = "2021"
 rand = "0.8.4"
 optima-macros = {path ="../optima-macros"}
 chrono = "0.4.19"
-
-[profile.dev]
-debug = 2
-strip = "none"
