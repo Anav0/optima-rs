@@ -22,25 +22,19 @@ fn main() {
         name: String::from("booth"),
         func: &booth,
     };
-    let bukin_bench = FnBench {
-        global_minimum: (-10.0, 1.0, 0.0),
-        max: 10.0,
-        min: -10.0,
-        name: String::from("bukin"),
-        func: &bukin,
-    };
+   
     let cromick_bench = FnBench {
-        global_minimum: (-0.54719, -1.54719, -1.91),
-        max: 10.0,
-        min: -10.0,
-        name: String::from("cromic"),
+        global_minimum: (-0.54719, -1.54719, -1.9133),
+        max: 4.0,
+        min: -3.0,
+        name: String::from("cormick"),
         func: &cormick,
     };
 
-    let benches = vec![booth_bench, bukin_bench, cromick_bench];
+    let benches = vec![booth_bench, cromick_bench];
 
-    let stop_criteria = MaxSteps::new(1000);
-    let mut swarm = ParticleSwarm::new(1000, stop_criteria);
+    let stop_criteria = MaxSteps::new(2000);
+    let mut swarm = ParticleSwarm::new(2000, stop_criteria);
 
     for bench in benches {
         let problem = FnProblem::new(0, bench.max, bench.min);
@@ -70,10 +64,6 @@ fn main() {
 //https://en.wikipedia.org/wiki/Test_functions_for_optimization
 fn booth(x: f64, y: f64) -> f64 {
     f64::powf(x + 2.0 * y - 7.0, 2.0) + f64::powf(2.0 * x + y - 5.0, 2.0)
-}
-
-fn bukin(x: f64, y: f64) -> f64 {
-    100.0 * (y - 0.01 * x.powf(2.0)).sqrt() + 0.001 * (x + 10.0).abs()
 }
 
 fn cormick(x: f64, y: f64) -> f64 {
