@@ -101,9 +101,6 @@ where
 
     fn reset(&mut self) {
         self.stop_criteria.reset();
-
-        let rng = thread_rng();
-        self.rng = rng;
         self.best_global_index = 0;
     }
 
@@ -127,7 +124,6 @@ where
         self.particles.clear();
 
         for i in 0..self.particles.capacity() {
-            // Pick random position in search space.
             let mut particle = Particle {
                 best_local_index: i,
                 velocity_x: self.rng.gen(),
@@ -140,7 +136,6 @@ where
             criterion.evaluate(&problem, &mut particle);
             self.particles.push(particle);
 
-            //If current particle is better then best save that info
             if self.is_better(i, self.best_global_index, criterion.is_minimization) {
                 self.best_global_index = i;
             }
@@ -198,8 +193,7 @@ where
                 _ => {}
             }
         }
-
-        self.particles.clone()
+        vec![self.particles[self.best_global_index].clone()]
     }
 
     fn reset(&mut self) {

@@ -39,8 +39,8 @@ fn main() {
 
     let benches = vec![booth_bench, bukin_bench, cromick_bench];
 
-    let stop_criteria = MaxSteps::new(10000);
-    let mut swarm = ParticleSwarm::new(40, stop_criteria);
+    let stop_criteria = MaxSteps::new(1000);
+    let mut swarm = ParticleSwarm::new(1000, stop_criteria);
 
     for bench in benches {
         let problem = FnProblem::new(0, bench.max, bench.min);
@@ -53,7 +53,7 @@ fn main() {
         let best = &particles[0];
 
         println!(
-            "{}({}, {} = {}), Known smallest value: {}({}, {}) = {}",
+            "{}({}, {}) = {}, Known smallest value: {}({}, {}) = {}",
             bench.name,
             best.x,
             best.y,
