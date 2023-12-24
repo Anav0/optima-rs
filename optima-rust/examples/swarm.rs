@@ -22,7 +22,7 @@ fn main() {
         name: String::from("booth"),
         func: &booth,
     };
-   
+
     let cromick_bench = FnBench {
         global_minimum: (-0.54719, -1.54719, -1.9133),
         max: 4.0,
@@ -36,6 +36,11 @@ fn main() {
     let stop_criteria = MaxSteps::new(2000);
     let mut swarm = ParticleSwarm::new(2000, stop_criteria);
 
+    let longest_fn = benches
+        .iter()
+        .max_by(|a, b| a.name.len().cmp(&b.name.len()))
+        .unwrap();
+
     for bench in benches {
         let problem = FnProblem::new(0, bench.max, bench.min);
 
@@ -46,8 +51,9 @@ fn main() {
         let particles = swarm.solve(problem, &mut criterion);
         let best = &particles[0];
 
+        // let padding = longest_fn.name.len() - bench.name.len();
         println!(
-            "{}({}, {}) = {}, Known smallest value: {}({}, {}) = {}",
+            "{:<8}({:+.3}, {:+.3}) = {:+.3} | Smallest known value: {:>8}({:+.3}, {:+.3}) = {:+.3} | Delta: {:+.3}",
             bench.name,
             best.x,
             best.y,
@@ -56,6 +62,7 @@ fn main() {
             bench.global_minimum.0,
             bench.global_minimum.1,
             bench.global_minimum.2,
+            best.get_value() - bench.global_minimum.2 
         );
     }
 }

@@ -27,6 +27,22 @@
 				"isDefault": false
 			},
 			"label": "cargo build examples",
+		},
+		{
+			"type": "cargo",
+			"command": "build",
+			"args": [
+				"--examples",
+				"--release"
+			],
+			"problemMatcher": [
+				"$rustc"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": false
+			},
+			"label": "cargo build examples release",
 		}
 	]
 }
