@@ -15,6 +15,7 @@ pub struct SimulatedAnnealing<'a, P: Problem, S: Solution, C: Cooler, SC: StopCr
     change: &'a ChangeFn<S, P>,
     initial_solution: &'a S,
     insight: Option<&'a mut AnnealingInsightFn<S, P, C>>,
+    rnd: ThreadRng,
 }
 
 impl<'a, P, S, C, SC> SimulatedAnnealing<'a, P, S, C, SC>
@@ -36,6 +37,7 @@ where
             cooler,
             change,
             insight: None,
+            rnd: rand::thread_rng(),
         }
     }
 
@@ -44,8 +46,7 @@ where
     }
 
     fn hot_enough_to_swap(
-        &self,
-        rnd: &mut ThreadRng,
+        &mut self,
         current_value: f64,
         before_move: f64,
     ) -> bool {
@@ -58,7 +59,7 @@ where
             return true;
         }
 
-        return rnd.gen::<f64>() < E.powf(diff / self.cooler.get_temp());
+        return self.rnd.gen::<f64>() < E.powf(diff / self.cooler.get_temp());
     }
 }
 
@@ -72,7 +73,6 @@ where
     fn solve(&mut self, problem: P, criterion: &mut Criterion<P, S>) -> Vec<S> {
         self.reset();
 
-        let mut rnd = rand::thread_rng();
         let mut solution = self.initial_solution.clone();
 
         //Initial evaluation
@@ -86,13 +86,12 @@ where
         while !self.stop_criteria.should_stop(solution.get_value()) {
             //Save current state and then change and evaluate it
             let before = solution.clone();
-            (change)(&mut solution, &problem, &mut rnd);
+            (change)(&mut solution, &problem, &mut self.rnd);
             criterion.evaluate(&problem, &mut solution);
 
             let best_eval = best.get_eval();
 
             let hot_enough = self.hot_enough_to_swap(
-                &mut rnd,
                 solution.get_eval().value,
                 before.get_eval().value,
             );
