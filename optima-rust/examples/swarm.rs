@@ -33,8 +33,8 @@ fn main() {
 
     let benches = vec![booth_bench, cromick_bench];
 
-    let stop_criteria = MaxSteps::new(2000);
-    let mut swarm = ParticleSwarm::new(2000, stop_criteria);
+    let stop_criteria = MaxSteps::new(6000);
+    let mut swarm = ParticleSwarm::new(3500, stop_criteria);
 
     let longest_fn = benches
         .iter()
