@@ -30,19 +30,8 @@ impl Particle {
         self.x += self.velocity_x;
         self.y += self.velocity_y;
 
-        if self.x > max {
-            self.x = max;
-        }
-        if self.x < min {
-            self.x = min;
-        }
-
-        if self.y > max {
-            self.y = max;
-        }
-        if self.y < min {
-            self.y = min;
-        }
+        self.x = f64::clamp(self.x, min, max);
+        self.x = f64::clamp(self.y, min, max);
     }
 }
 #[derive(Copy, Clone)]
