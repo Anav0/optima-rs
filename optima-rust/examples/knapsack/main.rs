@@ -127,7 +127,7 @@ impl<const LENGTH: usize> AsCsvRow for KnapsackSolution<LENGTH> {
 use misc::Generator::{SimilarWeight, StronglyCorrelated, Uncorrelated};
 
 fn main() {
-    const HOW_MANY_RUNS: u8 = 2;
+    const HOW_MANY_RUNS: u8 = 100;
     let mut factory = KnapsackInstanceFactory::new(25, 250.0, 2);
 
     let mut problems = factory
@@ -137,13 +137,16 @@ fn main() {
 
     let problems_len = problems.len();
 
-    let mut criterion = Criterion::new(&penalty, &value, false);
-    let cooler = QuadraticCooler::new(1000.0, 0.997);
-    let max_steps = MaxSteps::new(20000);
-    let header = String::from("Iter,Value,Temp,InstanceName,WhichInstance,WhichRun\n");
     let local: DateTime<Local> = Local::now();
-    let time_str = local.format("%Y-%m-%d %H-%M-%S");
-    let mut csv = CsvSaver::new(format!("./csv/{}.csv", time_str), header);
+    let time_str = local.format("%Y-%m-%d_%H-%M-%S");
+
+    let header = String::from("Iter,Value,Temp,InstanceName,WhichInstance,WhichRun\n");
+
+    let n = 20000;
+    let mut criterion = Criterion::new(&penalty, &value, false);
+    let cooler                              = QuadraticCooler::new(1000.0, 0.997);
+    let max_steps                                  = MaxSteps::new(n);
+    let mut csv = CsvSaver::new(format!("D:\\Projects\\optima-rust\\optima-rust\\csv\\{}.csv", time_str), header);
     let mut call_count = 0;
     let mut insight = move |cooler: &QuadraticCooler,
                             _: u32,
@@ -162,23 +165,24 @@ fn main() {
         call_count += 1;
 
         //TODO: oh my god
-        if call_count == 20000 * HOW_MANY_RUNS as usize * problems_len {
+        if call_count == n * HOW_MANY_RUNS as usize {
             println!("FLUSH!");
             csv.flush();
         }
     };
+
     let mut which_instance = 0;
     for problem in &mut problems {
         problem.instance = which_instance;
         println!("\n{}\n", problem.name);
+
         let initial_solution = KnapsackSolution::random_init(&problem);
-        let mut annealing =
-            SimulatedAnnealing::new(&initial_solution, max_steps, cooler, &change_solution);
+        let mut annealing = SimulatedAnnealing::new(&initial_solution, max_steps, cooler, &change_solution);
+
         annealing.register_insight(&mut insight);
 
         for run in 0..HOW_MANY_RUNS {
             problem.run = run;
-            print!(" .");
             annealing.solve(problem.clone(), &mut criterion);
         }
         which_instance += 1;

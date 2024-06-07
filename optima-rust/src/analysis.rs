@@ -48,7 +48,7 @@ impl CsvSaver {
 
 impl CsvSaver {
     pub fn new(file_path: String, header: String) -> Self {
-        let mut file = File::create(&file_path).expect("Cannot create csv file");
+        let mut file = File::create(&file_path).expect(&format!("Cannot create csv file at: {file_path}"));
         file.write_all(header.as_bytes())
             .expect("Failed to write a csv header");
         Self {
