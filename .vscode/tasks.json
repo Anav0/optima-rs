@@ -26,7 +26,7 @@
 				"kind": "build",
 				"isDefault": false
 			},
-			"label": "cargo build examples",
+			"label": "cargo build examples"
 		},
 		{
 			"type": "cargo",
@@ -42,7 +42,16 @@
 				"kind": "build",
 				"isDefault": false
 			},
-			"label": "cargo build examples release",
+			"label": "cargo build examples release"
+		},
+		{
+			"type": "cargo",
+			"command": "build",
+			"problemMatcher": [
+				"$rustc"
+			],
+			"group": "build",
+			"label": "rust: cargo build"
 		}
 	]
 }

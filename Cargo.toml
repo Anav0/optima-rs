@@ -1,2 +1,2 @@
 [workspace]
-members = ["optima-macros", "optima-rust"]
+members = ["optima-macros", "optima-rust", "optima-ui"]
