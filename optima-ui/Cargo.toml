@@ -3,5 +3,8 @@ name = "optima-ui"
 version = "0.1.0"
 edition = "2021"
 
+[dependencies]
+optima-rust = { path = "../optima-rust" }
+
 [build-dependencies]
 bindgen = "0.69.4"

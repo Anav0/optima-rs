@@ -7,18 +7,16 @@ pub static WHITE: Color = Color {
     a: 255,
 };
 
-pub static RED: Color = Color {
-    r: 186,
-    g: 2,
-    b: 2,
-    a: 255,
-};
 pub static BLUE: Color = Color {
     r: 0,
     g: 0,
     b: 255,
     a: 255,
 };
+
+pub static GOLD: Color = Color { r: 254, g: 201, b: 56, a: 255 };
+
+pub static RED: Color  = Color { r: 228, g: 60, b: 47, a: 255 };
 
 pub static BLACK: Color = Color {
     r: 0,

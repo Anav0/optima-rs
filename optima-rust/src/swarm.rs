@@ -13,7 +13,7 @@ use crate::{
     },
 };
 
-pub type SwarmInsightFn = dyn Fn(&FnProblem, &Vec<Particle>);
+pub type SwarmInsightFn = dyn FnMut(&FnProblem, &Vec<Particle>, usize) -> bool;
 
 #[solution_attr]
 #[derive(Clone, DerivedSolution)]
@@ -177,10 +177,13 @@ where
                     self.best_global_index = i;
                 }
             }
-            match &mut self.insight {
-                Some(f) => f(&problem, &self.particles),
-                _ => {}
-            }
+
+            let should_stop = match &mut self.insight {
+                Some(f) => f(&problem, &self.particles, self.best_global_index),
+                _ => false
+            };
+
+            if should_stop { break; }
         }
         vec![self.particles[self.best_global_index].clone()]
     }

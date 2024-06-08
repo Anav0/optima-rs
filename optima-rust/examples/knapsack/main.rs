@@ -137,7 +137,7 @@ fn main() {
 
     let problems_len = problems.len();
 
-    let local: Dateime<Local> = Local::now();
+    let local: DateTime<Local> = Local::now();
     let time_str = local.format("%Y-%m-%d_%H-%M-%S");
 
     let header = String::from("Iter,Value,Temp,InstanceName,WhichInstance,WhichRun\n");
