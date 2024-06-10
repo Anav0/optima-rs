@@ -31,7 +31,7 @@ impl Particle {
         self.y += self.velocity_y;
 
         self.x = f64::clamp(self.x, min, max);
-        self.x = f64::clamp(self.y, min, max);
+        self.y = f64::clamp(self.y, min, max);
     }
 }
 #[derive(Copy, Clone)]
@@ -180,10 +180,12 @@ where
 
             let should_stop = match &mut self.insight {
                 Some(f) => f(&problem, &self.particles, self.best_global_index),
-                _ => false
+                _ => false,
             };
 
-            if should_stop { break; }
+            if should_stop {
+                break;
+            }
         }
         vec![self.particles[self.best_global_index].clone()]
     }
