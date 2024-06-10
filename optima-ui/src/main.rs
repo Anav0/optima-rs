@@ -2,6 +2,7 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
+use std::path::Path;
 use std::path::PathBuf;
 use std::ptr;
 use std::thread;
@@ -77,6 +78,24 @@ fn update_cstring_in_place(c_string: &mut CString, new_str: &str) {
     }
 }
 
+unsafe fn load_font<T: AsRef<Path>>(path: T) -> Option<Font> {
+    let dir = std::env::current_dir().unwrap();
+    let mut font_path = PathBuf::new();
+    font_path.push(dir);
+    font_path.push(path);
+
+    let lato_font_path = CString::new(font_path.into_os_string().into_string().unwrap()).unwrap();
+    let font = LoadFont(lato_font_path.as_ptr());
+
+    let font_ptr: *const Font = &font;
+
+    if !IsFontReady(font) || font_ptr.is_null() {
+        return None;
+    }
+
+    Some(font)
+}
+
 fn main() {
     let booth_bench = FnBench {
         global_minimum: (1.0, 3.0, 0.0),
@@ -114,27 +133,8 @@ fn main() {
         let mut best_text = CString::new("Best: booth(1000, 1000) = 10000").unwrap();
         let best_text_pos = Vector2 { x: 50.0, y: 80.0 };
 
-        let dir = std::env::current_dir().unwrap();
-
-        let mut font_path = PathBuf::new();
-        font_path.push(dir);
-        font_path.push("optima-ui\\fonts\\Lato-Regular.ttf");
-
-        let lato_font_path =
-            CString::new(font_path.into_os_string().into_string().unwrap()).unwrap();
-        let font = LoadFont(lato_font_path.as_ptr());
-
-        let max_try = 10;
-        let mut tried = 0;
-        while !IsFontReady(font) {
-            if tried > max_try {
-                panic!("Failed to load font!");
-            };
-            thread::sleep(Duration::from_millis(500));
-            tried += 1;
-        }
-
         let font_size = 24.0;
+        let font = load_font("optima-ui\\fonts\\Lato-Regular.ttf").expect("Failed to load font");
 
         let draw_ui =
             &mut move |_problem: &FnProblem, particles: &Vec<Particle>, best_index: usize| {
