@@ -2,7 +2,7 @@ use std::env;
 use std::path::PathBuf;
 
 fn main() {
-    println!("cargo:rustc-link-search=./optima-ui/raylib/");
+    println!("cargo:rustc-link-search=./optima-swarm-ui/raylib/");
     println!("cargo:rustc-link-lib=raylib");
     println!("cargo:rustc-link-lib=msvcrt");
     println!("cargo:rustc-link-lib=OpenGL32");

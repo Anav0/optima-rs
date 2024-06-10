@@ -8,10 +8,10 @@
     <file url="file://$PROJECT_DIR$/optima-rust/Cargo.toml" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/optima-rust/examples/knapsack/main.rs" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/optima-rust/src/swarm.rs" charset="UTF-8" />
-    <file url="file://$PROJECT_DIR$/optima-ui/Cargo.toml" charset="UTF-8" />
-    <file url="file://$PROJECT_DIR$/optima-ui/build.rs" charset="UTF-8" />
-    <file url="file://$PROJECT_DIR$/optima-ui/src/colors.rs" charset="UTF-8" />
-    <file url="file://$PROJECT_DIR$/optima-ui/src/main.rs" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/optima-swarm-ui/Cargo.toml" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/optima-swarm-ui/build.rs" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/optima-swarm-ui/src/colors.rs" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/optima-swarm-ui/src/main.rs" charset="UTF-8" />
     <file url="mock:///Dummy.txt" charset="UTF-8" />
   </component>
 </project>

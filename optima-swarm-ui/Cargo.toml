@@ -1,10 +1,11 @@
 [package]
-name = "optima-ui"
+name = "optima-swarm-ui"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 optima-rust = { path = "../optima-rust" }
+clap = { version = "4.5.7", features = ["derive"] }
 
 [build-dependencies]
 bindgen = "0.69.4"

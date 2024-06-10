@@ -12,3 +12,5 @@
 .vscode/launch.json
 
 *.csv
+.idea/encodings.xml
+.idea/optima-rust.iml

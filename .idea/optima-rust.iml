@@ -7,7 +7,7 @@
       <sourceFolder url="file://$MODULE_DIR$/optima-macros/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/optima-rust/examples" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/optima-rust/src" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/optima-ui/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/optima-swarm-ui/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />

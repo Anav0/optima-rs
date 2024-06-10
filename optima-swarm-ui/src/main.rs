@@ -2,23 +2,44 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
+use clap::Parser;
+use clap::ValueEnum;
 use std::path::Path;
 use std::path::PathBuf;
 use std::ptr;
+use std::time::Duration;
+
 use std::thread;
+use std::{ffi::c_char, ffi::CString};
 
 use optima_rust::{
-    annealing::stop::{MaxSteps, NotGettingBetter},
-    base::{Criterion, OptAlgorithm, Solution},
+    annealing::stop::NotGettingBetter,
+    base::{Criterion, OptAlgorithm},
     swarm::{FnProblem, Particle, ParticleSwarm},
 };
 
 mod colors;
 
 use colors::*;
-use std::{ffi::c_char, ffi::CString, time::Duration};
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
+enum MathFnTwoArgs {
+    Cormack,
+    Booth,
+}
+
+#[derive(Parser)]
+#[command(name = "Function selector")]
+#[command(about = "Select function to optimize")]
+struct Cli {
+    #[arg(short, value_enum)]
+    method: MathFnTwoArgs,
+
+    #[arg(short, default_value_t = 0)]
+    slowdown: u64,
+}
 
 const WIN_H: i32 = 1080;
 const WIN_W: i32 = 1920;
@@ -42,8 +63,6 @@ fn booth(x: f64, y: f64) -> f64 {
 fn cormick(x: f64, y: f64) -> f64 {
     (x + y).sin() + (x - y).powf(2.0) - 1.5 * x + 2.5 * y + 1.0
 }
-
-fn draw_ui(problem: &FnProblem, particles: &Vec<Particle>) {}
 
 fn percent(value: f64, min: f64, max: f64) -> f64 {
     return (value - min) / (max - min);
@@ -97,21 +116,32 @@ unsafe fn load_font<T: AsRef<Path>>(path: T) -> Option<Font> {
 }
 
 fn main() {
-    let booth_bench = FnBench {
-        global_minimum: (1.0, 3.0, 0.0),
-        max: 10.0,
-        min: -10.0,
-        name: String::from("booth"),
-        func: &booth,
+    let cli = Cli::parse();
+
+    let fn_to_optimize = match cli.method {
+        MathFnTwoArgs::Booth => FnBench {
+            global_minimum: (1.0, 3.0, 0.0),
+            max: 10.0,
+            min: -10.0,
+            name: String::from("booth"),
+            func: &booth,
+        },
+        MathFnTwoArgs::Cormack => FnBench {
+            global_minimum: (-0.54719, -1.54719, 0.0),
+            max: 10.0,
+            min: -10.0,
+            name: String::from("cormack"),
+            func: &booth,
+        },
     };
 
     let stop_criteria = NotGettingBetter::new(15000, 500, true);
 
     let mut swarm = ParticleSwarm::new(100, stop_criteria);
 
-    let problem = FnProblem::new(0, booth_bench.max, booth_bench.min);
+    let problem = FnProblem::new(0, fn_to_optimize.max, fn_to_optimize.min);
 
-    let value_fn = |_problem: &FnProblem, part: &Particle| (booth_bench.func)(part.x, part.y);
+    let value_fn = |_problem: &FnProblem, part: &Particle| (fn_to_optimize.func)(part.x, part.y);
 
     let mut criterion = Criterion::new(&|_, _| 0.0, &value_fn, true);
 
@@ -123,8 +153,8 @@ fn main() {
         let refresh = GetMonitorRefreshRate(monitor);
         SetTargetFPS(refresh);
 
-        let max = booth_bench.max;
-        let min = booth_bench.min;
+        let max = fn_to_optimize.max;
+        let min = fn_to_optimize.min;
 
         let mut iter = 1;
 
@@ -134,8 +164,10 @@ fn main() {
         let best_text_pos = Vector2 { x: 50.0, y: 80.0 };
 
         let font_size = 24.0;
-        let font = load_font("optima-ui\\fonts\\Lato-Regular.ttf").expect("Failed to load font");
+        let font =
+            load_font("optima-swarm-ui\\fonts\\Lato-Regular.ttf").expect("Failed to load font");
 
+        let sleep_dur = Duration::from_millis(cli.slowdown);
         let draw_ui =
             &mut move |_problem: &FnProblem, particles: &Vec<Particle>, best_index: usize| {
                 BeginDrawing();
@@ -146,7 +178,7 @@ fn main() {
                 update_cstring_in_place(&mut iter_text, &format!("Iter: {}", iter));
                 update_cstring_in_place(
                     &mut best_text,
-                    &format!("Best: booth({:.3}, {:.3})", best.x.round(), best.y.round()),
+                    &format!("Best: {}({:.3}, {:.3})", fn_to_optimize.name, best.x.round(), best.y.round()),
                 );
 
                 DrawTextEx(
@@ -157,6 +189,7 @@ fn main() {
                     1.0,
                     BLACK,
                 );
+
                 DrawTextEx(
                     font,
                     best_text.as_ptr(),
@@ -181,6 +214,8 @@ fn main() {
                 iter += 1;
 
                 EndDrawing();
+
+                thread::sleep(sleep_dur);
 
                 WindowShouldClose()
             };
