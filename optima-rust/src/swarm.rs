@@ -157,7 +157,7 @@ where
                 let best_global = &self.particles[self.best_global_index];
                 let local = self.local_attraction * r_local * (best_local.x - particle.x);
                 let global = self.global_attraction * r_global * (best_global.x - particle.x);
-                let mut particle = &mut self.particles[i];
+                let particle = &mut self.particles[i];
                 particle.velocity_x = self.inertia * particle.velocity_x + local + global;
 
                 //Update y velocity

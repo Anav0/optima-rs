@@ -2,8 +2,9 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
-use std::thread;
+use std::path::PathBuf;
 use std::ptr;
+use std::thread;
 
 use optima_rust::{
     annealing::stop::{MaxSteps, NotGettingBetter},
@@ -14,7 +15,7 @@ use optima_rust::{
 mod colors;
 
 use colors::*;
-use std::{ffi::CString, ffi::c_char, time::Duration};
+use std::{ffi::c_char, ffi::CString, time::Duration};
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
@@ -48,31 +49,33 @@ fn percent(value: f64, min: f64, max: f64) -> f64 {
 }
 
 unsafe fn draw_particle(p: &Particle, min: f64, max: f64, color: Color) {
-        let p_x: f64 = percent(p.x, min, max);
-        let p_y: f64 = percent(p.y, min, max);
+    let p_x: f64 = percent(p.x, min, max);
+    let p_y: f64 = percent(p.y, min, max);
 
-        let x: i32 = (f64::from(WIN_W) * p_x).round() as i32;
-        let y: i32 = (f64::from(WIN_H) * p_y).round() as i32;
+    let x: i32 = (f64::from(WIN_W) * p_x).round() as i32;
+    let y: i32 = (f64::from(WIN_H) * p_y).round() as i32;
 
-        DrawCircle(x, y, 10.0, color);
+    DrawCircle(x, y, 5.0, color);
 }
-    fn update_cstring_in_place(c_string: &mut CString, new_str: &str) {
-        let new_len = new_str.len();
-        let old_len = c_string.as_bytes().len();
-        
-        // Ensure the new string fits within the existing allocation
-        if new_len > old_len {
-            panic!("New string is too long to fit in the existing CString buffer. {new_len} > {old_len}");
-        }
+fn update_cstring_in_place(c_string: &mut CString, new_str: &str) {
+    let new_len = new_str.len();
+    let old_len = c_string.as_bytes().len();
 
-        let ptr: *mut c_char = c_string.as_ptr() as *mut c_char;
-        unsafe {
-            // Copy the new string bytes into the CString buffer
-            ptr::copy_nonoverlapping(new_str.as_ptr(), ptr as *mut u8, new_len);
-            // Null-terminate the CString
-            *ptr.add(new_len) = 0;
-        }
+    // Ensure the new string fits within the existing allocation
+    if new_len > old_len {
+        panic!(
+            "New string is too long to fit in the existing CString buffer. {new_len} > {old_len}"
+        );
     }
+
+    let ptr: *mut c_char = c_string.as_ptr() as *mut c_char;
+    unsafe {
+        // Copy the new string bytes into the CString buffer
+        ptr::copy_nonoverlapping(new_str.as_ptr(), ptr as *mut u8, new_len);
+        // Null-terminate the CString
+        *ptr.add(new_len) = 0;
+    }
+}
 
 fn main() {
     let booth_bench = FnBench {
@@ -107,51 +110,80 @@ fn main() {
         let mut iter = 1;
 
         let mut iter_text = CString::new("Iter: 2000000").unwrap();
-        let iter_text_pos = Vector2 {x :50.0, y: 50.0 };
+        let iter_text_pos = Vector2 { x: 50.0, y: 50.0 };
         let mut best_text = CString::new("Best: booth(1000, 1000) = 10000").unwrap();
-        let best_text_pos = Vector2 {x :50.0, y: 80.0 };
+        let best_text_pos = Vector2 { x: 50.0, y: 80.0 };
 
-        let lato_font_path = CString::new("D:/Projects/optima-rust/optima-ui/fonts/Lato-Regular.ttf").unwrap();
+        let dir = std::env::current_dir().unwrap();
+
+        let mut font_path = PathBuf::new();
+        font_path.push(dir);
+        font_path.push("optima-ui\\fonts\\Lato-Regular.ttf");
+
+        let lato_font_path =
+            CString::new(font_path.into_os_string().into_string().unwrap()).unwrap();
         let font = LoadFont(lato_font_path.as_ptr());
 
         let max_try = 10;
         let mut tried = 0;
         while !IsFontReady(font) {
-            if tried > max_try { panic!("Failed to load font!"); };
+            if tried > max_try {
+                panic!("Failed to load font!");
+            };
             thread::sleep(Duration::from_millis(500));
-            tried+=1;
+            tried += 1;
         }
 
         let font_size = 24.0;
 
-        let draw_ui = &mut move |_problem: &FnProblem, particles: &Vec<Particle>, best_index: usize| {
-            BeginDrawing();
+        let draw_ui =
+            &mut move |_problem: &FnProblem, particles: &Vec<Particle>, best_index: usize| {
+                BeginDrawing();
 
-            ClearBackground(WHITE);
+                ClearBackground(WHITE);
 
-            let best = &particles[best_index];
-            update_cstring_in_place(&mut iter_text, &format!("Iter: {}", iter));
-            update_cstring_in_place(&mut best_text, &format!("Best: booth({:.3}, {:.3})", best.x.round(), best.y.round()));
+                let best = &particles[best_index];
+                update_cstring_in_place(&mut iter_text, &format!("Iter: {}", iter));
+                update_cstring_in_place(
+                    &mut best_text,
+                    &format!("Best: booth({:.3}, {:.3})", best.x.round(), best.y.round()),
+                );
 
-            DrawTextEx(font, iter_text.as_ptr(), iter_text_pos, font_size, 1.0, BLACK);
-            DrawTextEx(font, best_text.as_ptr(), best_text_pos, font_size, 1.0, GOLD);
+                DrawTextEx(
+                    font,
+                    iter_text.as_ptr(),
+                    iter_text_pos,
+                    font_size,
+                    1.0,
+                    BLACK,
+                );
+                DrawTextEx(
+                    font,
+                    best_text.as_ptr(),
+                    best_text_pos,
+                    font_size,
+                    1.0,
+                    GOLD,
+                );
 
-            let mut i = 0;
-            for p in particles {
-                if i == best_index { continue; }
-                draw_particle(p, min, max, BLUE);
-                i += 1;
-            }
+                let mut i = 0;
+                for p in particles {
+                    if i == best_index {
+                        continue;
+                    }
+                    draw_particle(p, min, max, BLUE);
+                    i += 1;
+                }
 
-            let p = &particles[best_index];
-            draw_particle(p, min, max, RED);
+                let p = &particles[best_index];
+                draw_particle(p, min, max, RED);
 
-            iter += 1;
+                iter += 1;
 
-            EndDrawing();
+                EndDrawing();
 
-            WindowShouldClose()
-        };
+                WindowShouldClose()
+            };
 
         swarm.register_insight(draw_ui);
 
