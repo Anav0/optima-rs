@@ -24,3 +24,5 @@ pub static BLACK: Color = Color {
     b: 0,
     a: 255,
 };
+
+pub static BTN_BG: Color = Color { r: 254, g: 201, b: 56, a: 125 };

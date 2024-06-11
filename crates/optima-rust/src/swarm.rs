@@ -1,4 +1,8 @@
-use std::fmt::Display;
+use std::{
+    fmt::Display,
+    thread::{self, current},
+    time::Duration,
+};
 
 use rand::{
     distributions::Uniform,
@@ -26,6 +30,19 @@ pub struct Particle {
 }
 
 impl Particle {
+    pub fn new(x: f64, y: f64) -> Self {
+        Self {
+            x,
+            y,
+            best_local_index: 0,
+            velocity_x: 0.0,
+            velocity_y: 0.0,
+            eval: Evaluation {
+                value: 0.0,
+                is_feasible: true,
+            },
+        }
+    }
     pub fn update_position(&mut self, min: f64, max: f64) {
         self.x += self.velocity_x;
         self.y += self.velocity_y;
@@ -84,6 +101,26 @@ where
         }
     }
 
+    pub fn with_attraction(
+        size: usize,
+        stop_criteria: SC,
+        global_attraction: f64,
+        local_attraction: f64,
+        inertia: f64,
+    ) -> Self {
+        let rng = thread_rng();
+        Self {
+            particles: Vec::with_capacity(size),
+            best_global_index: 0,
+            stop_criteria,
+            global_attraction,
+            local_attraction,
+            inertia,
+            insight: None,
+            rng,
+        }
+    }
+
     pub fn register_insight(&mut self, f: &'a mut SwarmInsightFn) {
         self.insight = Some(f);
     }
@@ -93,20 +130,15 @@ where
         self.best_global_index = 0;
     }
 
-    fn is_better(&self, that: usize, this: usize, is_minimization: bool) -> bool {
-        let best_value = self.particles[this].get_value();
-        let current_value = self.particles[that].get_value();
+    fn is_better(&self, this: usize, known_best_index: usize, is_minimization: bool) -> bool {
+        let best_value = self.particles[known_best_index].get_value();
+        let current_value = self.particles[this].get_value();
 
-        if is_minimization {
-            if current_value < best_value {
-                return true;
-            }
+        return if is_minimization {
+            current_value < best_value
         } else {
-            if current_value > best_value {
-                return true;
-            }
-        }
-        false
+            current_value > best_value
+        };
     }
 
     fn initialize(&mut self, problem: &FnProblem, criterion: &mut Criterion<FnProblem, Particle>) {
@@ -172,8 +204,22 @@ where
                 //Update position in search space according to velocity
                 particle.update_position(problem.min, problem.max);
 
-                //Update best and local trackers
-                if self.is_better(i, self.best_global_index, criterion.is_minimization) {
+                criterion.evaluate(&problem, particle);
+
+                let particle = &self.particles[i];
+
+                let best_local_index = particle.best_local_index;
+                let is_local_better =
+                    self.is_better(i, best_local_index, criterion.is_minimization);
+
+                let is_this_better =
+                    self.is_better(i, self.best_global_index, criterion.is_minimization);
+
+                let particle = &mut self.particles[i];
+                if is_local_better {
+                    particle.best_local_index = i;
+                }
+                if is_this_better {
                     self.best_global_index = i;
                 }
             }

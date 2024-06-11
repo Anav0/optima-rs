@@ -19,8 +19,10 @@ use optima_rust::{
 };
 
 mod colors;
+mod ui;
 
 use colors::*;
+use ui::*;
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
@@ -37,8 +39,8 @@ struct Cli {
     #[arg(short, value_enum)]
     method: MathFnTwoArgs,
 
-    #[arg(short, default_value_t = 0)]
-    slowdown: u64,
+    #[arg(short, default_value_t = 0.0)]
+    slowdown: f64,
 }
 
 const WIN_H: i32 = 1080;
@@ -137,7 +139,7 @@ fn main() {
 
     let stop_criteria = NotGettingBetter::new(15000, 500, true);
 
-    let mut swarm = ParticleSwarm::new(100, stop_criteria);
+    let mut swarm = ParticleSwarm::with_attraction(100, stop_criteria,0.05, 0.04, 0.02);
 
     let problem = FnProblem::new(0, fn_to_optimize.max, fn_to_optimize.min);
 
@@ -162,23 +164,35 @@ fn main() {
         let iter_text_pos = Vector2 { x: 50.0, y: 50.0 };
         let mut best_text = CString::new("Best: booth(1000, 1000) = 10000").unwrap();
         let best_text_pos = Vector2 { x: 50.0, y: 80.0 };
+        let mut run_btn_text = CString::new("Run").unwrap();
 
         let font_size = 24.0;
         let font =
             load_font("optima-swarm-ui\\fonts\\Lato-Regular.ttf").expect("Failed to load font");
 
-        let sleep_dur = Duration::from_millis(cli.slowdown);
+        let known_optimum = Particle::new(
+            fn_to_optimize.global_minimum.0,
+            fn_to_optimize.global_minimum.1,
+        );
+
         let draw_ui =
             &mut move |_problem: &FnProblem, particles: &Vec<Particle>, best_index: usize| {
                 BeginDrawing();
 
                 ClearBackground(WHITE);
 
+                draw_particle(&known_optimum, min, max, GOLD);
+
                 let best = &particles[best_index];
                 update_cstring_in_place(&mut iter_text, &format!("Iter: {}", iter));
                 update_cstring_in_place(
                     &mut best_text,
-                    &format!("Best: {}({:.3}, {:.3})", fn_to_optimize.name, best.x.round(), best.y.round()),
+                    &format!(
+                        "Best: {}({:.3}, {:.3})",
+                        fn_to_optimize.name,
+                        best.x.round(),
+                        best.y.round()
+                    ),
                 );
 
                 DrawTextEx(
@@ -199,6 +213,17 @@ fn main() {
                     GOLD,
                 );
 
+                if draw_btn(
+                    &font,
+                    run_btn_text.as_ptr(),
+                    100,
+                    100,
+                    100.0,
+                    45.0,
+                    font_size,
+                    BTN_BG,
+                ) {}
+
                 let mut i = 0;
                 for p in particles {
                     if i == best_index {
@@ -215,7 +240,7 @@ fn main() {
 
                 EndDrawing();
 
-                thread::sleep(sleep_dur);
+                WaitTime(cli.slowdown);
 
                 WindowShouldClose()
             };
@@ -225,7 +250,7 @@ fn main() {
         let particles = swarm.solve(problem, &mut criterion);
         let best = &particles[0];
 
-        draw_particle(best, min, max, GOLD);
+        draw_particle(best, min, max, RED);
 
         while !WindowShouldClose() {}
 
