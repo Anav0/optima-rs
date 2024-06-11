@@ -5,9 +5,12 @@
 use clap::Parser;
 use clap::ValueEnum;
 use image::io::Reader;
+use image::ImageBuffer;
+use image::Luma;
 use optima_rust::swarm::max_value_of_range;
 use optima_rust::swarm::min_value_of_range;
 use std::fs;
+use std::io;
 use std::io::Cursor;
 use std::ops::Bound;
 use std::ops::RangeBounds;
@@ -52,6 +55,7 @@ struct Cli {
     slowdown: f64,
 }
 
+const MATERIAL_MAP_DIFFUSE: usize = 0;
 const WIN_H: u32 = 1080;
 const WIN_W: u32 = 1920;
 
@@ -146,7 +150,7 @@ fn generate_heightmap<R: RangeBounds<f64>>(
     fn_to_optimize: &FnBench<R>,
     w: u32,
     h: u32,
-) -> Vec<u8> {
+) -> io::Result<()> {
     let mut pixels: Vec<u8> = Vec::with_capacity((w * h) as usize);
 
     let x_min = min_value_of_range(&fn_to_optimize.x_range).unwrap();
@@ -168,22 +172,19 @@ fn generate_heightmap<R: RangeBounds<f64>>(
             min_value = f64::min(min_value, value);
             max_value = f64::max(max_value, value);
             pixels.push(value as u8);
-
-            // println!("fn({x:3}, {y:3}) = {value:3}");
         }
     }
 
     for pixel in &mut pixels {
         let p = percent(*pixel as f64, min_value, max_value);
-        assert!(p <= 1.0 && p >= 0.0);
         *pixel = (255.0 * p) as u8;
     }
 
-    // fs::write(file_name, &pixels).expect("Failed to save heightmap!");
-    image::save_buffer(file_name, &pixels, w, h, image::ExtendedColorType::L8)
-        .expect("Failed to save heightmap!");
+    let buffer: ImageBuffer<Luma<u8>, Vec<u8>> = ImageBuffer::from_vec(w, h, pixels).unwrap();
 
-    pixels
+    buffer.save_with_format(file_name, image::ImageFormat::Png).expect("Failed to save buffer as PNG!");
+
+    Ok(())
 }
 
 fn main() {
@@ -249,10 +250,73 @@ fn main() {
         let font =
             load_font("optima-swarm-ui\\fonts\\Lato-Regular.ttf").expect("Failed to load font");
 
-        // let pixels = generate_heightmap("heightmap.bmp", &fn_to_optimize, heightmap_w, heightmap_h);
-        let pixels = generate_heightmap("heightmap.bmp", &fn_to_optimize, 500, 500);
+        let heightmap_size = Vector3 {
+            x: 16.0,
+            y: 8.0,
+            z: 16.0,
+        };
 
-        panic!("AA!");
+        // generate_heightmap("heightmap.png", &fn_to_optimize, 500, 500);
+
+        let mut camera: Camera = Camera {
+            position: Vector3 {
+                x: 10.0,
+                y: 10.0,
+                z: 40.0,
+            },
+            up: Vector3 {
+                x: 0.0,
+                y: 1.0,
+                z: 0.0,
+            },
+            fovy: 45.0,
+            projection: CameraProjection_CAMERA_PERSPECTIVE,
+            target: Vector3 {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+        };
+
+        let heightmap_path = CString::new("heightmap.png").unwrap();
+        let image = LoadImage(heightmap_path.as_ptr());
+
+        let texture = LoadTextureFromImage(image);
+
+        let heightmap_mesh = GenMeshHeightmap(image, heightmap_size);
+
+        let heightmap_model = LoadModelFromMesh(heightmap_mesh);
+        let mut materials = std::slice::from_raw_parts(heightmap_model.materials, heightmap_model.materialCount as usize);
+        let mut mappa = std::slice::from_raw_parts_mut(materials[0].maps, 4);
+
+        mappa[MATERIAL_MAP_DIFFUSE].texture = texture;
+
+        let heightmap_pos = Vector3 {
+            x: -8.0,
+            y: -2.0,
+            z: -8.0,
+        };
+
+        UnloadImage(image);
+
+        while !WindowShouldClose() {
+            UpdateCamera(&mut camera, CameraMode_CAMERA_ORBITAL);
+
+            BeginDrawing();
+            ClearBackground(WHITE);
+
+            BeginMode3D(camera);
+                DrawModel(heightmap_model, heightmap_pos, 1.0, RED);
+                DrawGrid(20, 1.0);
+            EndMode3D();
+
+            EndDrawing();
+        }
+
+        UnloadTexture(texture);
+        UnloadModel(heightmap_model);
+
+        panic!("=========================");
 
         let known_optimum = Particle::new(
             fn_to_optimize.global_minimum.0,
