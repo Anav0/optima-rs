@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 optima-rust = { path = "../optima-rust" }
 clap = { version = "4.5.7", features = ["derive"] }
+image = { version = "0.25.1" }
 
 [build-dependencies]
 bindgen = "0.69.4"

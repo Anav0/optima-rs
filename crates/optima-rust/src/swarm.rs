@@ -1,5 +1,6 @@
 use std::{
     fmt::Display,
+    ops::{Bound, RangeBounds, RangeInclusive},
     thread::{self, current},
     time::Duration,
 };
@@ -17,7 +18,47 @@ use crate::{
     },
 };
 
-pub type SwarmInsightFn = dyn FnMut(&FnProblem, &Vec<Particle>, usize) -> bool;
+pub type SwarmInsightFn = dyn FnMut(&FnProblem<RangeInclusive<f64>>, &Vec<Particle>, usize) -> bool;
+
+pub fn min_value_of_range<R, T>(range: &R) -> Option<T>
+where
+    R: RangeBounds<T>,
+    T: PartialOrd + Clone,
+{
+    match (range.start_bound(), range.end_bound()) {
+        (Bound::Included(start), _) => Some(start.clone()), // Inclusive start bound
+        (Bound::Excluded(start), _) => Some(start.clone()), // Exclusive start bound
+        _ => None,
+    }
+}
+
+pub fn max_value_of_range<R, T>(range: &R) -> Option<T>
+where
+    R: RangeBounds<T>,
+    T: PartialOrd + Clone,
+{
+    match (range.start_bound(), range.end_bound()) {
+        (Bound::Included(_), Bound::Included(end)) => Some(end.clone()), // Inclusive end bound
+        (Bound::Included(start), Bound::Excluded(end)) => {
+            if *start < *end {
+                Some(end.clone()) // Exclusive end bound
+            } else {
+                Some(start.clone())
+            }
+        }
+        (Bound::Excluded(_), Bound::Included(end)) => Some(end.clone()), // Inclusive end bound
+        (Bound::Excluded(start), Bound::Excluded(end)) => {
+            if *start < *end {
+                Some(end.clone())
+            } else {
+                Some(start.clone())
+            }
+        }
+        (Bound::Unbounded, Bound::Included(end)) => Some(end.clone()), // Inclusive end bound
+        (Bound::Unbounded, Bound::Excluded(end)) => Some(end.clone()), // Exclusive end bound
+        _ => None,
+    }
+}
 
 #[solution_attr]
 #[derive(Clone, DerivedSolution)]
@@ -43,34 +84,43 @@ impl Particle {
             },
         }
     }
-    pub fn update_position(&mut self, min: f64, max: f64) {
+    pub fn update_position(&mut self, problem: &FnProblem<RangeInclusive<f64>>) {
         self.x += self.velocity_x;
         self.y += self.velocity_y;
 
-        self.x = f64::clamp(self.x, min, max);
-        self.y = f64::clamp(self.y, min, max);
+        let x_min = min_value_of_range(&problem.x_range).unwrap();
+        let x_max = min_value_of_range(&problem.x_range).unwrap();
+
+        let y_min = min_value_of_range(&problem.y_range).unwrap();
+        let y_max = min_value_of_range(&problem.y_range).unwrap();
+
+        self.x = f64::clamp(self.x, x_min, x_max);
+        self.y = f64::clamp(self.y, y_min, y_max);
     }
 }
 #[derive(Copy, Clone)]
-pub struct FnProblem {
+pub struct FnProblem<R: RangeBounds<f64>> {
     pub id: u32,
-    pub max: f64,
-    pub min: f64,
-    pub points_distribution: Uniform<f64>,
+    pub x_range: R,
+    pub y_range: R,
+
+    points_distribution_x: Uniform<f64>,
+    points_distribution_y: Uniform<f64>,
 }
 
-impl FnProblem {
-    pub fn new(id: u32, max: f64, min: f64) -> Self {
+impl FnProblem<RangeInclusive<f64>> {
+    pub fn new(id: u32, x_range: RangeInclusive<f64>, y_range: RangeInclusive<f64>) -> Self {
         Self {
-            min,
-            max,
+            points_distribution_x: Uniform::from(x_range.clone()),
+            points_distribution_y: Uniform::from(y_range.clone()),
+            x_range: x_range,
+            y_range: y_range,
             id,
-            points_distribution: Uniform::new_inclusive(min, max),
         }
     }
 }
 
-impl Problem for FnProblem {}
+impl<R: RangeBounds<f64>> Problem for FnProblem<R> {}
 
 pub struct ParticleSwarm<'a, SC: StopCriteria> {
     pub particles: Vec<Particle>,
@@ -141,7 +191,11 @@ where
         };
     }
 
-    fn initialize(&mut self, problem: &FnProblem, criterion: &mut Criterion<FnProblem, Particle>) {
+    fn initialize(
+        &mut self,
+        problem: &FnProblem<RangeInclusive<f64>>,
+        criterion: &mut Criterion<FnProblem<RangeInclusive<f64>>, Particle>,
+    ) {
         self.particles.clear();
 
         for i in 0..self.particles.capacity() {
@@ -149,8 +203,8 @@ where
                 best_local_index: i,
                 velocity_x: self.rng.gen(),
                 velocity_y: self.rng.gen(),
-                x: problem.points_distribution.sample(&mut self.rng),
-                y: problem.points_distribution.sample(&mut self.rng),
+                x: problem.points_distribution_x.sample(&mut self.rng),
+                y: problem.points_distribution_y.sample(&mut self.rng),
                 eval: Evaluation::default(),
             };
 
@@ -164,14 +218,14 @@ where
     }
 }
 
-impl<'a, SC> OptAlgorithm<'a, FnProblem, Particle> for ParticleSwarm<'a, SC>
+impl<'a, SC> OptAlgorithm<'a, FnProblem<RangeInclusive<f64>>, Particle> for ParticleSwarm<'a, SC>
 where
     SC: StopCriteria,
 {
     fn solve(
         &mut self,
-        problem: FnProblem,
-        criterion: &mut Criterion<FnProblem, Particle>,
+        problem: FnProblem<RangeInclusive<f64>>,
+        criterion: &mut Criterion<FnProblem<RangeInclusive<f64>>, Particle>,
     ) -> Vec<Particle> {
         self.reset();
         self.initialize(&problem, criterion);
@@ -202,7 +256,7 @@ where
                 particle.velocity_y = self.inertia * particle.velocity_y + local + global;
 
                 //Update position in search space according to velocity
-                particle.update_position(problem.min, problem.max);
+                particle.update_position(&problem);
 
                 criterion.evaluate(&problem, particle);
 
