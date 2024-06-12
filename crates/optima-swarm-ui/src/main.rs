@@ -44,14 +44,17 @@ enum MathFnTwoArgs {
 }
 
 #[derive(Parser)]
-#[command(name = "Function selector")]
-#[command(about = "Select function to optimize")]
+#[command(name = "Optima")]
+#[command(about = "Swarm algorithm")]
 struct Cli {
-    #[arg(short, value_enum)]
+    #[arg(short, help = "Function to optimize", value_enum)]
     method: MathFnTwoArgs,
 
-    #[arg(short, default_value_t = 0.0)]
+    #[arg(short, help = "Wait time between simulation", default_value_t = 0.0)]
     slowdown: f64,
+
+    #[arg(short, help = "Force heightmap recalculation", default_value_t = false)]
+    force: bool,
 }
 
 const MATERIAL_MAP_DIFFUSE: usize = 0;
