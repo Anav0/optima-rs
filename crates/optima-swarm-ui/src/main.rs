@@ -61,8 +61,18 @@ const MATERIAL_MAP_DIFFUSE: usize = 0;
 const WIN_H: u32 = 1080;
 const WIN_W: u32 = 1920;
 
-const HEIGHTMAP_W: u32 = 500;
-const HEIGHTMAP_H: u32 = 500;
+const HEIGHTMAP_W: u32 = 800;
+const HEIGHTMAP_H: u32 = 800;
+const HEIGHTMAP_POS: Vector3 = Vector3 {
+    x: -8.0,
+    y: 1.0,
+    z: -8.0,
+};
+const HEIGHTMAP_SIZE: Vector3 = Vector3 {
+    x: 16.0,
+    y: 8.0,
+    z: 16.0,
+};
 
 pub type MathFunction = dyn Fn(f64, f64) -> f64;
 
@@ -101,24 +111,24 @@ unsafe fn draw_particle<R: RangeBounds<f64>>(
     fn_to_optimize: &FnBench<R>,
     color: Color,
 ) {
+    let v = (fn_to_optimize.func)(p.x, p.y);
+
     let x_min = min_value_of_range(&problem.x_range).unwrap();
     let x_max = max_value_of_range(&problem.x_range).unwrap();
 
     let y_min = min_value_of_range(&problem.y_range).unwrap();
     let y_max = max_value_of_range(&problem.y_range).unwrap();
 
-    let p_x: f64 = percent(p.x, x_min, x_max);
-    let p_y: f64 = percent(p.y, y_min, y_max);
+    let v_min = fn_to_optimize.v_min_found;
+    let v_max = fn_to_optimize.v_max_found;
 
-    // let x = (f64::from(WIN_W) * p_x).round() as f32;
-    // let y = (f64::from(WIN_H) * p_y).round() as f32;
-    // let z = (fn_to_optimize.func)(p_x, p_y) as f32;
+    let p_x = percent(p.x, x_min, x_max) as f32;
+    let p_y = percent(p.y, y_min, y_max) as f32;
+    let p_v = percent(v, v_min, v_max) as f32;
 
-    let v = (fn_to_optimize.func)(p_x, p_y);
-
-    let x = 0.0;
-    let y = ((v - y_min) / (y_max - y_min)) as f32;
-    let z = 0.0;
+    let x = HEIGHTMAP_POS.x + (HEIGHTMAP_SIZE.x * p_x); //HEIGHTMAP_POS.x + HEIGHTMAP_SIZE.x * p_x;
+    let y = HEIGHTMAP_POS.y + (HEIGHTMAP_SIZE.y * p_v);
+    let z = HEIGHTMAP_POS.z + (HEIGHTMAP_SIZE.z * p_y); // HEIGHTMAP_POS.z + HEIGHTMAP_SIZE.z * p_y;
 
     let size = 0.25;
     DrawCube(Vector3 { x, y, z }, size, size, size, color);
@@ -285,20 +295,25 @@ fn main() {
         let font =
             load_font("optima-swarm-ui\\fonts\\Lato-Regular.ttf").expect("Failed to load font");
 
-        let heightmap_size = Vector3 {
-            x: 16.0,
-            y: 8.0,
-            z: 16.0,
-        };
-
-        let heightmap_filename = format!("{}.png", fn_to_optimize.name);
+        let heightmap_filename = format!(
+            "{}_{}_{}.png",
+            fn_to_optimize.name, HEIGHTMAP_W, HEIGHTMAP_H
+        );
 
         let (pixels, v_min, v_max) = take_samples(&fn_to_optimize, HEIGHTMAP_W, HEIGHTMAP_H);
         fn_to_optimize.v_max_found = v_max;
         fn_to_optimize.v_min_found = v_min;
 
         if !Path::new(&heightmap_filename).exists() {
-            generate_heightmap(&heightmap_filename, pixels, v_max, v_min, HEIGHTMAP_W, HEIGHTMAP_H).expect(&format!(
+            generate_heightmap(
+                &heightmap_filename,
+                pixels,
+                v_max,
+                v_min,
+                HEIGHTMAP_W,
+                HEIGHTMAP_H,
+            )
+            .expect(&format!(
                 "Failed to generate heightmap for: {heightmap_filename}"
             ));
         }
@@ -327,7 +342,7 @@ fn main() {
 
         let texture = LoadTextureFromImage(image);
 
-        let heightmap_mesh = GenMeshHeightmap(image, heightmap_size);
+        let heightmap_mesh = GenMeshHeightmap(image, HEIGHTMAP_SIZE);
 
         let heightmap_model = LoadModelFromMesh(heightmap_mesh);
         let mut materials = std::slice::from_raw_parts(
@@ -337,12 +352,6 @@ fn main() {
         let mut mappa = std::slice::from_raw_parts_mut(materials[0].maps, 4);
 
         mappa[MATERIAL_MAP_DIFFUSE].texture = texture;
-
-        let heightmap_pos = Vector3 {
-            x: -8.0,
-            y: 1.0,
-            z: -8.0,
-        };
 
         UnloadImage(image);
 
@@ -356,7 +365,6 @@ fn main() {
         let draw_ui = &mut move |problem: &FnProblem<RangeInclusive<f64>>,
                                  particles: &Vec<Particle>,
                                  best_index: usize| {
-            while !WindowShouldClose() {
                 UpdateCamera(&mut camera, CameraMode_CAMERA_ORBITAL);
 
                 BeginDrawing();
@@ -364,22 +372,24 @@ fn main() {
                 ClearBackground(WHITE);
 
                 BeginMode3D(camera);
-                // DrawModel(heightmap_model, heightmap_pos, 1.0, RED);
+            DrawModel(heightmap_model, HEIGHTMAP_POS, 1.0, GREEN);
                 DrawGrid(20, 1.0);
 
                 draw_particle(&known_optimum, &problem, &func, GOLD);
 
-                let mut i = 0;
-                for p in particles {
-                    if i == best_index {
-                        continue;
-                    }
-                    draw_particle(p, &problem, &func, BLUE);
-                    i += 1;
-                }
+            // draw_particle(&known_optimum, &problem, &func, GOLD);
 
-                let p = &particles[best_index];
-                draw_particle(p, &problem, &func, RED);
+            // let mut i = 0;
+            // for p in particles {
+            //     if i == best_index {
+            //         continue;
+            //     }
+            //     draw_particle(p, &problem, &func, BLUE);
+            //     i += 1;
+            // }
+
+            // let p = &particles[best_index];
+            // draw_particle(p, &problem, &func, RED);
 
                 iter += 1;
 
@@ -416,7 +426,6 @@ fn main() {
                 );
 
                 EndDrawing();
-            }
 
             WaitTime(cli.slowdown);
 
