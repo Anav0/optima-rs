@@ -89,10 +89,10 @@ impl Particle {
         self.y += self.velocity_y;
 
         let x_min = min_value_of_range(&problem.x_range).unwrap();
-        let x_max = min_value_of_range(&problem.x_range).unwrap();
+        let x_max = max_value_of_range(&problem.x_range).unwrap();
 
         let y_min = min_value_of_range(&problem.y_range).unwrap();
-        let y_max = min_value_of_range(&problem.y_range).unwrap();
+        let y_max = max_value_of_range(&problem.y_range).unwrap();
 
         self.x = f64::clamp(self.x, x_min, x_max);
         self.y = f64::clamp(self.y, y_min, y_max);
