@@ -176,8 +176,8 @@ fn take_samples<R: RangeBounds<f64>>(
     fn_to_optimize: &FnBench<R>,
     w: u32,
     h: u32,
-) -> (Vec<u8>, f64, f64) {
-    let mut pixels: Vec<u8> = Vec::with_capacity((w * h) as usize);
+) -> (Vec<f64>, f64, f64) {
+    let mut samples: Vec<f64> = Vec::with_capacity((w * h) as usize);
 
     let x_min = min_value_of_range(&fn_to_optimize.x_range).unwrap();
     let x_max = max_value_of_range(&fn_to_optimize.x_range).unwrap();
@@ -194,27 +194,31 @@ fn take_samples<R: RangeBounds<f64>>(
         for j in 0..h {
             let x = x_min + i as f64 * resolution_x;
             let y = y_min + j as f64 * resolution_y;
+            assert!(x <= x_max && x >= x_min);
+            assert!(y <= y_max && y >= y_min);
             let value = (fn_to_optimize.func)(x as f64, y as f64);
             min_value = f64::min(min_value, value);
             max_value = f64::max(max_value, value);
-            pixels.push(value as u8);
+            samples.push(value);
         }
     }
 
-    (pixels, min_value, max_value)
+    (samples, min_value, max_value)
 }
 
 fn generate_heightmap(
     file_name: &str,
-    mut pixels: Vec<u8>,
+    mut values: Vec<f64>,
     v_max: f64,
     v_min: f64,
     w: u32,
     h: u32,
 ) -> io::Result<()> {
-    for pixel in &mut pixels {
-        let p = percent(*pixel as f64, v_min, v_max);
-        *pixel = (255.0 * p) as u8;
+    let mut pixels: Vec<u8> = Vec::with_capacity(values.capacity());
+
+    for value in &mut values {
+        let p = percent(*value as f64, v_min, v_max);
+        pixels.push((255.0 * p) as u8);
     }
 
     let buffer: ImageBuffer<Luma<u8>, Vec<u8>> = ImageBuffer::from_vec(w, h, pixels).unwrap();
@@ -300,14 +304,14 @@ fn main() {
             fn_to_optimize.name, HEIGHTMAP_W, HEIGHTMAP_H
         );
 
-        let (pixels, v_min, v_max) = take_samples(&fn_to_optimize, HEIGHTMAP_W, HEIGHTMAP_H);
+        let (samples, v_min, v_max) = take_samples(&fn_to_optimize, HEIGHTMAP_W, HEIGHTMAP_H);
         fn_to_optimize.v_max_found = v_max;
         fn_to_optimize.v_min_found = v_min;
 
-        if !Path::new(&heightmap_filename).exists() {
+        if !Path::new(&heightmap_filename).exists() || cli.force {
             generate_heightmap(
                 &heightmap_filename,
-                pixels,
+                samples,
                 v_max,
                 v_min,
                 HEIGHTMAP_W,
@@ -365,17 +369,33 @@ fn main() {
         let draw_ui = &mut move |problem: &FnProblem<RangeInclusive<f64>>,
                                  particles: &Vec<Particle>,
                                  best_index: usize| {
-                UpdateCamera(&mut camera, CameraMode_CAMERA_ORBITAL);
+            UpdateCamera(&mut camera, CameraMode_CAMERA_ORBITAL);
 
-                BeginDrawing();
+            BeginDrawing();
 
-                ClearBackground(WHITE);
+            ClearBackground(WHITE);
 
-                BeginMode3D(camera);
+            BeginMode3D(camera);
             DrawModel(heightmap_model, HEIGHTMAP_POS, 1.0, GREEN);
-                DrawGrid(20, 1.0);
+            // DrawModelEx(
+            //     heightmap_model,
+            //     HEIGHTMAP_POS,
+            //     Vector3 {
+            //         x: 0.0,
+            //         y: 0.0,
+            //         z: 0.0,
+            //     },
+            //     0.0,
+            //     Vector3 {
+            //         x: 0.05,
+            //         y: 0.005,
+            //         z: 0.05,
+            //     },
+            //     GREEN,
+            // );
+            DrawGrid(20, 1.0);
 
-                draw_particle(&known_optimum, &problem, &func, GOLD);
+            draw_particle(&known_optimum, &problem, &func, GOLD);
 
             // draw_particle(&known_optimum, &problem, &func, GOLD);
 
@@ -391,41 +411,41 @@ fn main() {
             // let p = &particles[best_index];
             // draw_particle(p, &problem, &func, RED);
 
-                iter += 1;
+            iter += 1;
 
-                EndMode3D();
+            EndMode3D();
 
-                let best = &particles[best_index];
-                update_cstring_in_place(&mut iter_text, &format!("Iter: {}", iter));
-                update_cstring_in_place(
-                    &mut best_text,
-                    &format!(
-                        "Best: {}({:.3}, {:.3})",
-                        fn_to_optimize.name,
-                        best.x.round(),
-                        best.y.round()
-                    ),
-                );
+            let best = &particles[best_index];
+            update_cstring_in_place(&mut iter_text, &format!("Iter: {}", iter));
+            update_cstring_in_place(
+                &mut best_text,
+                &format!(
+                    "Best: {}({:.3}, {:.3})",
+                    fn_to_optimize.name,
+                    best.x.round(),
+                    best.y.round()
+                ),
+            );
 
-                DrawTextEx(
-                    font,
-                    iter_text.as_ptr(),
-                    iter_text_pos,
-                    font_size,
-                    1.0,
-                    BLACK,
-                );
+            DrawTextEx(
+                font,
+                iter_text.as_ptr(),
+                iter_text_pos,
+                font_size,
+                1.0,
+                BLACK,
+            );
 
-                DrawTextEx(
-                    font,
-                    best_text.as_ptr(),
-                    best_text_pos,
-                    font_size,
-                    1.0,
-                    GOLD,
-                );
+            DrawTextEx(
+                font,
+                best_text.as_ptr(),
+                best_text_pos,
+                font_size,
+                1.0,
+                GOLD,
+            );
 
-                EndDrawing();
+            EndDrawing();
 
             WaitTime(cli.slowdown);
 
