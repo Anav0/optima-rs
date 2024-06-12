@@ -376,40 +376,21 @@ fn main() {
             ClearBackground(WHITE);
 
             BeginMode3D(camera);
-            DrawModel(heightmap_model, HEIGHTMAP_POS, 1.0, GREEN);
-            // DrawModelEx(
-            //     heightmap_model,
-            //     HEIGHTMAP_POS,
-            //     Vector3 {
-            //         x: 0.0,
-            //         y: 0.0,
-            //         z: 0.0,
-            //     },
-            //     0.0,
-            //     Vector3 {
-            //         x: 0.05,
-            //         y: 0.005,
-            //         z: 0.05,
-            //     },
-            //     GREEN,
-            // );
+                DrawModel(heightmap_model, HEIGHTMAP_POS, 1.0, GREEN);
             DrawGrid(20, 1.0);
 
             draw_particle(&known_optimum, &problem, &func, GOLD);
 
-            // draw_particle(&known_optimum, &problem, &func, GOLD);
+            let mut i = 0;
+            for p in particles {
+                if i == best_index {
+                    continue;
+                }
+                draw_particle(p, &problem, &func, BLUE);
+                i += 1;
+            }
 
-            // let mut i = 0;
-            // for p in particles {
-            //     if i == best_index {
-            //         continue;
-            //     }
-            //     draw_particle(p, &problem, &func, BLUE);
-            //     i += 1;
-            // }
-
-            // let p = &particles[best_index];
-            // draw_particle(p, &problem, &func, RED);
+            // draw_particle(&particles[best_index], &problem, &func, RED);
 
             iter += 1;
 
