@@ -15,3 +15,4 @@
 .idea/encodings.xml
 .idea/optima-rust.iml
 heightmap.bmp
+*.png

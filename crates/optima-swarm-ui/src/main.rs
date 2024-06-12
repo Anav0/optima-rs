@@ -11,7 +11,6 @@ use optima_rust::swarm::max_value_of_range;
 use optima_rust::swarm::min_value_of_range;
 use std::fs;
 use std::io;
-use std::io::Cursor;
 use std::ops::Bound;
 use std::ops::RangeBounds;
 use std::ops::RangeInclusive;
@@ -59,8 +58,8 @@ const MATERIAL_MAP_DIFFUSE: usize = 0;
 const WIN_H: u32 = 1080;
 const WIN_W: u32 = 1920;
 
-const heightmap_h: u32 = 720;
-const heightmap_w: u32 = 1080;
+const HEIGHTMAP_W: u32 = 500;
+const HEIGHTMAP_H: u32 = 500;
 
 pub type MathFunction = dyn Fn(f64, f64) -> f64;
 
@@ -69,6 +68,8 @@ struct FnBench<'a, R: RangeBounds<f64>> {
     pub name: String,
     pub x_range: R,
     pub y_range: R,
+    pub v_min_found: f64,
+    pub v_max_found: f64,
     pub global_minimum: (f64, f64, f64),
     pub func: &'a MathFunction,
 }
@@ -91,7 +92,12 @@ fn percent(value: f64, min: f64, max: f64) -> f64 {
     return (value - min) / (max - min);
 }
 
-unsafe fn draw_particle<R: RangeBounds<f64>>(p: &Particle, problem: &FnProblem<R>, color: Color) {
+unsafe fn draw_particle<R: RangeBounds<f64>>(
+    p: &Particle,
+    problem: &FnProblem<R>,
+    fn_to_optimize: &FnBench<R>,
+    color: Color,
+) {
     let x_min = min_value_of_range(&problem.x_range).unwrap();
     let x_max = max_value_of_range(&problem.x_range).unwrap();
 
@@ -101,10 +107,18 @@ unsafe fn draw_particle<R: RangeBounds<f64>>(p: &Particle, problem: &FnProblem<R
     let p_x: f64 = percent(p.x, x_min, x_max);
     let p_y: f64 = percent(p.y, y_min, y_max);
 
-    let x: i32 = (f64::from(WIN_W) * p_x).round() as i32;
-    let y: i32 = (f64::from(WIN_H) * p_y).round() as i32;
+    // let x = (f64::from(WIN_W) * p_x).round() as f32;
+    // let y = (f64::from(WIN_H) * p_y).round() as f32;
+    // let z = (fn_to_optimize.func)(p_x, p_y) as f32;
 
-    DrawCircle(x, y, 5.0, color);
+    let v = (fn_to_optimize.func)(p_x, p_y);
+
+    let x = 0.0;
+    let y = ((v - y_min) / (y_max - y_min)) as f32;
+    let z = 0.0;
+
+    let size = 0.25;
+    DrawCube(Vector3 { x, y, z }, size, size, size, color);
 }
 
 fn update_cstring_in_place(c_string: &mut CString, new_str: &str) {
@@ -145,12 +159,11 @@ unsafe fn load_font<T: AsRef<Path>>(path: T) -> Option<Font> {
     Some(font)
 }
 
-fn generate_heightmap<R: RangeBounds<f64>>(
-    file_name: &str,
+fn take_samples<R: RangeBounds<f64>>(
     fn_to_optimize: &FnBench<R>,
     w: u32,
     h: u32,
-) -> io::Result<()> {
+) -> (Vec<u8>, f64, f64) {
     let mut pixels: Vec<u8> = Vec::with_capacity((w * h) as usize);
 
     let x_min = min_value_of_range(&fn_to_optimize.x_range).unwrap();
@@ -175,14 +188,27 @@ fn generate_heightmap<R: RangeBounds<f64>>(
         }
     }
 
+    (pixels, min_value, max_value)
+}
+
+fn generate_heightmap(
+    file_name: &str,
+    mut pixels: Vec<u8>,
+    v_max: f64,
+    v_min: f64,
+    w: u32,
+    h: u32,
+) -> io::Result<()> {
     for pixel in &mut pixels {
-        let p = percent(*pixel as f64, min_value, max_value);
+        let p = percent(*pixel as f64, v_min, v_max);
         *pixel = (255.0 * p) as u8;
     }
 
     let buffer: ImageBuffer<Luma<u8>, Vec<u8>> = ImageBuffer::from_vec(w, h, pixels).unwrap();
 
-    buffer.save_with_format(file_name, image::ImageFormat::Png).expect("Failed to save buffer as PNG!");
+    buffer
+        .save_with_format(file_name, image::ImageFormat::Png)
+        .expect("Failed to save buffer as PNG!");
 
     Ok(())
 }
@@ -190,13 +216,15 @@ fn generate_heightmap<R: RangeBounds<f64>>(
 fn main() {
     let cli = Cli::parse();
 
-    let fn_to_optimize = match cli.method {
+    let mut fn_to_optimize = match cli.method {
         MathFnTwoArgs::Booth => FnBench {
             global_minimum: (1.0, 3.0, 0.0),
             name: String::from("booth"),
             x_range: (-10.0..=10.0),
             y_range: (-10.0..=10.0),
             func: &booth,
+            v_max_found: f64::MIN,
+            v_min_found: f64::MAX,
         },
         MathFnTwoArgs::Simple => FnBench {
             global_minimum: (-10.0, 10.0, -100.0),
@@ -204,6 +232,8 @@ fn main() {
             x_range: (-10.0..=10.0),
             y_range: (-10.0..=10.0),
             func: &simple,
+            v_max_found: f64::MIN,
+            v_min_found: f64::MAX,
         },
         MathFnTwoArgs::Cormick => FnBench {
             global_minimum: (-0.54719, -1.54719, 0.0),
@@ -211,6 +241,8 @@ fn main() {
             x_range: (-1.5..=4.0),
             y_range: (-3.0..=4.0),
             func: &cormick,
+            v_max_found: f64::MIN,
+            v_min_found: f64::MAX,
         },
     };
 
@@ -256,13 +288,23 @@ fn main() {
             z: 16.0,
         };
 
-        // generate_heightmap("heightmap.png", &fn_to_optimize, 500, 500);
+        let heightmap_filename = format!("{}.png", fn_to_optimize.name);
+
+        let (pixels, v_min, v_max) = take_samples(&fn_to_optimize, HEIGHTMAP_W, HEIGHTMAP_H);
+        fn_to_optimize.v_max_found = v_max;
+        fn_to_optimize.v_min_found = v_min;
+
+        if !Path::new(&heightmap_filename).exists() {
+            generate_heightmap(&heightmap_filename, pixels, v_max, v_min, HEIGHTMAP_W, HEIGHTMAP_H).expect(&format!(
+                "Failed to generate heightmap for: {heightmap_filename}"
+            ));
+        }
 
         let mut camera: Camera = Camera {
             position: Vector3 {
                 x: 10.0,
-                y: 10.0,
-                z: 40.0,
+                y: 20.0,
+                z: 30.0,
             },
             up: Vector3 {
                 x: 0.0,
@@ -278,116 +320,100 @@ fn main() {
             },
         };
 
-        let heightmap_path = CString::new("heightmap.png").unwrap();
-        let image = LoadImage(heightmap_path.as_ptr());
+        let image = LoadImage(CString::new(heightmap_filename).unwrap().as_ptr());
 
         let texture = LoadTextureFromImage(image);
 
         let heightmap_mesh = GenMeshHeightmap(image, heightmap_size);
 
         let heightmap_model = LoadModelFromMesh(heightmap_mesh);
-        let mut materials = std::slice::from_raw_parts(heightmap_model.materials, heightmap_model.materialCount as usize);
+        let mut materials = std::slice::from_raw_parts(
+            heightmap_model.materials,
+            heightmap_model.materialCount as usize,
+        );
         let mut mappa = std::slice::from_raw_parts_mut(materials[0].maps, 4);
 
         mappa[MATERIAL_MAP_DIFFUSE].texture = texture;
 
         let heightmap_pos = Vector3 {
             x: -8.0,
-            y: -2.0,
+            y: 1.0,
             z: -8.0,
         };
 
         UnloadImage(image);
-
-        while !WindowShouldClose() {
-            UpdateCamera(&mut camera, CameraMode_CAMERA_ORBITAL);
-
-            BeginDrawing();
-            ClearBackground(WHITE);
-
-            BeginMode3D(camera);
-                DrawModel(heightmap_model, heightmap_pos, 1.0, RED);
-                DrawGrid(20, 1.0);
-            EndMode3D();
-
-            EndDrawing();
-        }
-
-        UnloadTexture(texture);
-        UnloadModel(heightmap_model);
-
-        panic!("=========================");
 
         let known_optimum = Particle::new(
             fn_to_optimize.global_minimum.0,
             fn_to_optimize.global_minimum.1,
         );
 
-        let draw_ui = &mut move |_problem: &FnProblem<RangeInclusive<f64>>,
+        let func = fn_to_optimize.clone();
+
+        let draw_ui = &mut move |problem: &FnProblem<RangeInclusive<f64>>,
                                  particles: &Vec<Particle>,
                                  best_index: usize| {
-            BeginDrawing();
+            while !WindowShouldClose() {
+                UpdateCamera(&mut camera, CameraMode_CAMERA_ORBITAL);
 
-            ClearBackground(WHITE);
+                BeginDrawing();
 
-            draw_particle(&known_optimum, &problem, GOLD);
+                ClearBackground(WHITE);
 
-            let best = &particles[best_index];
-            update_cstring_in_place(&mut iter_text, &format!("Iter: {}", iter));
-            update_cstring_in_place(
-                &mut best_text,
-                &format!(
-                    "Best: {}({:.3}, {:.3})",
-                    fn_to_optimize.name,
-                    best.x.round(),
-                    best.y.round()
-                ),
-            );
+                BeginMode3D(camera);
+                // DrawModel(heightmap_model, heightmap_pos, 1.0, RED);
+                DrawGrid(20, 1.0);
 
-            DrawTextEx(
-                font,
-                iter_text.as_ptr(),
-                iter_text_pos,
-                font_size,
-                1.0,
-                BLACK,
-            );
+                draw_particle(&known_optimum, &problem, &func, GOLD);
 
-            DrawTextEx(
-                font,
-                best_text.as_ptr(),
-                best_text_pos,
-                font_size,
-                1.0,
-                GOLD,
-            );
-
-            if draw_btn(
-                &font,
-                run_btn_text.as_ptr(),
-                100,
-                100,
-                100.0,
-                45.0,
-                font_size,
-                BTN_BG,
-            ) {}
-
-            let mut i = 0;
-            for p in particles {
-                if i == best_index {
-                    continue;
+                let mut i = 0;
+                for p in particles {
+                    if i == best_index {
+                        continue;
+                    }
+                    draw_particle(p, &problem, &func, BLUE);
+                    i += 1;
                 }
-                draw_particle(p, &problem, BLUE);
-                i += 1;
+
+                let p = &particles[best_index];
+                draw_particle(p, &problem, &func, RED);
+
+                iter += 1;
+
+                EndMode3D();
+
+                let best = &particles[best_index];
+                update_cstring_in_place(&mut iter_text, &format!("Iter: {}", iter));
+                update_cstring_in_place(
+                    &mut best_text,
+                    &format!(
+                        "Best: {}({:.3}, {:.3})",
+                        fn_to_optimize.name,
+                        best.x.round(),
+                        best.y.round()
+                    ),
+                );
+
+                DrawTextEx(
+                    font,
+                    iter_text.as_ptr(),
+                    iter_text_pos,
+                    font_size,
+                    1.0,
+                    BLACK,
+                );
+
+                DrawTextEx(
+                    font,
+                    best_text.as_ptr(),
+                    best_text_pos,
+                    font_size,
+                    1.0,
+                    GOLD,
+                );
+
+                EndDrawing();
             }
-
-            let p = &particles[best_index];
-            draw_particle(p, &problem, RED);
-
-            iter += 1;
-
-            EndDrawing();
 
             WaitTime(cli.slowdown);
 
@@ -397,11 +423,11 @@ fn main() {
         swarm.register_insight(draw_ui);
 
         let particles = swarm.solve(problem, &mut criterion);
-        let best = &particles[0];
-
-        draw_particle(best, &problem, RED);
 
         while !WindowShouldClose() {}
+
+        UnloadTexture(texture);
+        UnloadModel(heightmap_model);
 
         CloseWindow();
     }
