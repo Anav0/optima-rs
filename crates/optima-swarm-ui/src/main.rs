@@ -105,6 +105,11 @@ fn percent(value: f64, min: f64, max: f64) -> f64 {
     return (value - min) / (max - min);
 }
 
+unsafe fn center_x(text: *const i8, font_size: i32, parent_x: u32, parent_w: u32) -> f32 {
+    let text_w = MeasureText(text, font_size);
+    parent_x as f32 + ((parent_w as f32 / 2.0) - (text_w as f32 / 2.0))
+}
+
 unsafe fn draw_particle<R: RangeBounds<f64>>(
     p: &Particle,
     problem: &FnProblem<R>,
@@ -141,7 +146,7 @@ fn update_cstring_in_place(c_string: &mut CString, new_str: &str) {
     // Ensure the new string fits within the existing allocation
     if new_len > old_len {
         panic!(
-            "New string is too long to fit in the existing CString buffer. {new_len} > {old_len}"
+            "New string is too long to fit in the existing CString buffer. {new_len} > {old_len}\n{new_str}"
         );
     }
 
@@ -287,17 +292,42 @@ fn main() {
         let refresh = GetMonitorRefreshRate(monitor);
         SetTargetFPS(refresh);
 
-        let mut iter = 1;
-
-        let mut iter_text = CString::new("Iter: 2000000").unwrap();
-        let iter_text_pos = Vector2 { x: 50.0, y: 50.0 };
-        let mut best_text = CString::new("Best: booth(1000, 1000) = 10000").unwrap();
-        let best_text_pos = Vector2 { x: 50.0, y: 80.0 };
-        let mut run_btn_text = CString::new("Run").unwrap();
+        let known_optimum = Particle::new(
+            fn_to_optimize.global_minimum.0,
+            fn_to_optimize.global_minimum.1,
+        );
 
         let font_size = 24.0;
-        let font =
-            load_font("optima-swarm-ui\\fonts\\Lato-Regular.ttf").expect("Failed to load font");
+        let b_font_size = 36.0;
+
+        let spacing = 35.0;
+
+        let info_texts_pos = Vector2 { x: 50.0, y: 50.0 };
+        let mut info_texts_pos_ex = info_texts_pos;
+
+        let mut iter_text = CString::new("Iteration: 2000000").unwrap();
+        let mut best_text =
+            CString::new("Best found: some_fn_name_even_long_one_should_fit(1000, 1000) = 10000")
+                .unwrap();
+        let run_btn_text = CString::new("Run").unwrap();
+        let mut finished_text = CString::new("Done!").unwrap();
+        let finished_text_pos_x = center_x(finished_text.as_ptr(), b_font_size as i32, 0, WIN_W);
+        let finished_text_pos = Vector2 {
+            x: finished_text_pos_x,
+            y: 80.0,
+        };
+
+        let mut known_optimum_text = CString::new(format!(
+            "Known minimum: {}({:.3}, {:.3}) = {:.3}",
+            fn_to_optimize.name,
+            fn_to_optimize.global_minimum.0,
+            fn_to_optimize.global_minimum.1,
+            fn_to_optimize.global_minimum.2
+        ))
+        .unwrap();
+
+        let font = load_font("crates\\optima-swarm-ui\\fonts\\Lato-Regular.ttf")
+            .expect("Failed to load font");
 
         let heightmap_filename = format!(
             "{}_{}_{}.png",
@@ -359,16 +389,13 @@ fn main() {
 
         UnloadImage(image);
 
-        let known_optimum = Particle::new(
-            fn_to_optimize.global_minimum.0,
-            fn_to_optimize.global_minimum.1,
-        );
-
         let func = fn_to_optimize.clone();
 
+        let mut iter = 0;
         let draw_ui = &mut move |problem: &FnProblem<RangeInclusive<f64>>,
                                  particles: &Vec<Particle>,
-                                 best_index: usize| {
+                                 best_index: usize,
+                                 finished: bool| {
             UpdateCamera(&mut camera, CameraMode_CAMERA_ORBITAL);
 
             BeginDrawing();
@@ -376,6 +403,7 @@ fn main() {
             ClearBackground(WHITE);
 
             BeginMode3D(camera);
+
                 DrawModel(heightmap_model, HEIGHTMAP_POS, 1.0, GREEN);
             DrawGrid(20, 1.0);
 
@@ -392,39 +420,70 @@ fn main() {
 
             draw_particle(&particles[best_index], &problem, &func, RED);
 
+            if !finished {
             iter += 1;
+            }
 
             EndMode3D();
 
             let best = &particles[best_index];
-            update_cstring_in_place(&mut iter_text, &format!("Iter: {}", iter));
+            if !finished {
+                update_cstring_in_place(&mut iter_text, &format!("Iteration: {}", iter));
             update_cstring_in_place(
                 &mut best_text,
                 &format!(
-                    "Best: {}({:.3}, {:.3})",
+                        "Best found: {}({:.3}, {:.3}) = {:.3}",
                     fn_to_optimize.name,
-                    best.x.round(),
-                    best.y.round()
+                        best.x,
+                        best.y,
+                        (func.func)(best.x, best.y),
                 ),
             );
+            }
+
+            if finished {
+                DrawTextEx(
+                    font,
+                    finished_text.as_ptr(),
+                    finished_text_pos,
+                    b_font_size,
+                    1.0,
+                    BLACK,
+                );
+            }
 
             DrawTextEx(
                 font,
                 iter_text.as_ptr(),
-                iter_text_pos,
+                info_texts_pos_ex,
                 font_size,
                 1.0,
                 BLACK,
             );
 
+            info_texts_pos_ex.y += spacing;
+
             DrawTextEx(
                 font,
                 best_text.as_ptr(),
-                best_text_pos,
+                info_texts_pos_ex,
                 font_size,
                 1.0,
                 GOLD,
             );
+
+            info_texts_pos_ex.y += spacing;
+
+            DrawTextEx(
+                font,
+                known_optimum_text.as_ptr(),
+                info_texts_pos_ex,
+                font_size,
+                1.0,
+                GOLD,
+            );
+
+            info_texts_pos_ex = info_texts_pos;
 
             EndDrawing();
 
@@ -435,9 +494,11 @@ fn main() {
 
         swarm.register_insight(draw_ui);
 
-        let particles = swarm.solve(problem, &mut criterion);
+        let particles = swarm.solve(problem.clone(), &mut criterion);
 
-        while !WindowShouldClose() {}
+        while !WindowShouldClose() {
+            draw_ui(&problem, &particles, 0, true);
+        }
 
         UnloadTexture(texture);
         UnloadModel(heightmap_model);

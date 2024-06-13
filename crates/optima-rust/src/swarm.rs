@@ -18,7 +18,7 @@ use crate::{
     },
 };
 
-pub type SwarmInsightFn = dyn FnMut(&FnProblem<RangeInclusive<f64>>, &Vec<Particle>, usize) -> bool;
+pub type SwarmInsightFn = dyn FnMut(&FnProblem<RangeInclusive<f64>>, &Vec<Particle>, usize, bool) -> bool;
 
 pub fn min_value_of_range<R, T>(range: &R) -> Option<T>
 where
@@ -279,7 +279,7 @@ where
             }
 
             let should_stop = match &mut self.insight {
-                Some(f) => f(&problem, &self.particles, self.best_global_index),
+                Some(f) => f(&problem, &self.particles, self.best_global_index, false),
                 _ => false,
             };
 
