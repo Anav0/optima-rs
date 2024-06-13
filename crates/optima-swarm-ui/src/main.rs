@@ -390,7 +390,7 @@ fn main() {
                 i += 1;
             }
 
-            // draw_particle(&particles[best_index], &problem, &func, RED);
+            draw_particle(&particles[best_index], &problem, &func, RED);
 
             iter += 1;
 

@@ -43,3 +43,8 @@ pub enum State {
 }
 
 pub trait Problem {}
+
+// pub type AnnealingInsightFn<S, P, C> = dyn FnMut(&C, u32, &P, &S, &S, bool);
+// pub type SwarmInsightFn              = dyn FnMut(&FnProblem<RangeInclusive<f64>>, &Vec<Particle>, usize) -> bool;
+// pub type GeneticInsightFn<S>         = dyn Fn(u32, &Vec<S>);
+
