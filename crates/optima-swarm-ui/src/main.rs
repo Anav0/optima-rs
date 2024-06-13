@@ -9,6 +9,7 @@ use image::ImageBuffer;
 use image::Luma;
 use optima_rust::swarm::max_value_of_range;
 use optima_rust::swarm::min_value_of_range;
+use std::ffi::CStr;
 use std::fs;
 use std::io;
 use std::ops::Bound;
@@ -41,6 +42,7 @@ enum MathFnTwoArgs {
     Cormick,
     Booth,
     Simple,
+    Bukin,
 }
 
 #[derive(Parser)]
@@ -99,6 +101,10 @@ fn simple(x: f64, y: f64) -> f64 {
 
 fn cormick(x: f64, y: f64) -> f64 {
     (x + y).sin() + (x - y).powf(2.0) - 1.5 * x + 2.5 * y + 1.0
+}
+
+fn bukin(x: f64, y: f64) -> f64 {
+    100.0 * f64::sqrt((y - 0.01 * x.powf(2.0)).abs() + 0.01 * (x + 10.0).abs())
 }
 
 fn percent(value: f64, min: f64, max: f64) -> f64 {
@@ -239,6 +245,15 @@ fn main() {
     let cli = Cli::parse();
 
     let mut fn_to_optimize = match cli.method {
+        MathFnTwoArgs::Bukin => FnBench {
+            global_minimum: (-10.0, 1.0, 0.0),
+            name: String::from("bukin"),
+            x_range: (-15.0..=-5.0),
+            y_range: (-3.0..=3.0),
+            func: &bukin,
+            v_max_found: f64::MIN,
+            v_min_found: f64::MAX,
+        },
         MathFnTwoArgs::Booth => FnBench {
             global_minimum: (1.0, 3.0, 0.0),
             name: String::from("booth"),
@@ -268,7 +283,7 @@ fn main() {
         },
     };
 
-    let stop_criteria = NotGettingBetter::new(15000, 500, true);
+    let stop_criteria = NotGettingBetter::new(15000, 100, true);
 
     let mut swarm = ParticleSwarm::with_attraction(100, stop_criteria, 0.05, 0.04, 0.02);
 
@@ -404,7 +419,7 @@ fn main() {
 
             BeginMode3D(camera);
 
-                DrawModel(heightmap_model, HEIGHTMAP_POS, 1.0, GREEN);
+            DrawModel(heightmap_model, HEIGHTMAP_POS, 1.0, GREEN);
             DrawGrid(20, 1.0);
 
             draw_particle(&known_optimum, &problem, &func, GOLD);
@@ -421,7 +436,7 @@ fn main() {
             draw_particle(&particles[best_index], &problem, &func, RED);
 
             if !finished {
-            iter += 1;
+                iter += 1;
             }
 
             EndMode3D();
@@ -429,16 +444,16 @@ fn main() {
             let best = &particles[best_index];
             if !finished {
                 update_cstring_in_place(&mut iter_text, &format!("Iteration: {}", iter));
-            update_cstring_in_place(
-                &mut best_text,
-                &format!(
+                update_cstring_in_place(
+                    &mut best_text,
+                    &format!(
                         "Best found: {}({:.3}, {:.3}) = {:.3}",
-                    fn_to_optimize.name,
+                        fn_to_optimize.name,
                         best.x,
                         best.y,
                         (func.func)(best.x, best.y),
-                ),
-            );
+                    ),
+                );
             }
 
             if finished {
