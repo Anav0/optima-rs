@@ -9,6 +9,7 @@ use image::ImageBuffer;
 use image::Luma;
 use optima_rust::swarm::max_value_of_range;
 use optima_rust::swarm::min_value_of_range;
+use optima_rust::swarm::Suggestions;
 use std::ffi::CStr;
 use std::fs;
 use std::io;
@@ -52,7 +53,11 @@ struct Cli {
     #[arg(short, help = "Function to optimize", value_enum)]
     method: MathFnTwoArgs,
 
-    #[arg(short, help = "Wait time between simulation", default_value_t = 0.0)]
+    #[arg(
+        short,
+        help = "Wait time between simulation (seconds)",
+        default_value_t = 0.0
+    )]
     slowdown: f64,
 
     #[arg(short, help = "Force heightmap recalculation", default_value_t = false)]
@@ -70,6 +75,7 @@ const HEIGHTMAP_POS: Vector3 = Vector3 {
     y: 1.0,
     z: -8.0,
 };
+
 const HEIGHTMAP_SIZE: Vector3 = Vector3 {
     x: 16.0,
     y: 8.0,
@@ -77,6 +83,37 @@ const HEIGHTMAP_SIZE: Vector3 = Vector3 {
 };
 
 pub type MathFunction = dyn Fn(f64, f64) -> f64;
+
+#[derive(Clone)]
+struct Timer {
+    start_time: f64,
+    lifetime_s: f64,
+}
+
+impl Timer {
+    fn new(lifetime: f64) -> Self {
+        Self {
+            start_time: 0.0,
+            lifetime_s: lifetime,
+        }
+    }
+
+    unsafe fn reset(&mut self) {
+        self.start();
+    }
+
+    unsafe fn start(&mut self) {
+        self.start_time = GetTime();
+    }
+
+    fn stop(&mut self) {
+        self.start_time = 0.0;
+    }
+
+    unsafe fn finished(&self) -> bool {
+        return GetTime() - self.start_time >= self.lifetime_s;
+    }
+}
 
 #[derive(Clone)]
 struct FnBench<'a, R: RangeBounds<f64>> {
@@ -283,7 +320,7 @@ fn main() {
         },
     };
 
-    let stop_criteria = NotGettingBetter::new(15000, 100, true);
+    let stop_criteria = NotGettingBetter::new(15000, 500, true);
 
     let mut swarm = ParticleSwarm::with_attraction(100, stop_criteria, 0.05, 0.04, 0.02);
 
@@ -305,6 +342,7 @@ fn main() {
         InitWindow(WIN_W as i32 as i32, WIN_H as i32, window_name.as_ptr());
         let monitor = GetCurrentMonitor();
         let refresh = GetMonitorRefreshRate(monitor);
+
         SetTargetFPS(refresh);
 
         let known_optimum = Particle::new(
@@ -407,10 +445,19 @@ fn main() {
         let func = fn_to_optimize.clone();
 
         let mut iter = 0;
+
+        let mut timer = Timer::new(cli.slowdown);
+        timer.start();
+
         let draw_ui = &mut move |problem: &FnProblem<RangeInclusive<f64>>,
                                  particles: &Vec<Particle>,
                                  best_index: usize,
                                  finished: bool| {
+            if timer.finished() {
+                timer.reset();
+                iter += 1;
+            }
+
             UpdateCamera(&mut camera, CameraMode_CAMERA_ORBITAL);
 
             BeginDrawing();
@@ -424,20 +471,9 @@ fn main() {
 
             draw_particle(&known_optimum, &problem, &func, GOLD);
 
-            let mut i = 0;
-            for p in particles {
-                if i == best_index {
-                    continue;
-                }
-                draw_particle(p, &problem, &func, BLUE);
-                i += 1;
-            }
+            draw_particles_skip_best(particles, best_index, problem, &func);
 
             draw_particle(&particles[best_index], &problem, &func, RED);
-
-            if !finished {
-                iter += 1;
-            }
 
             EndMode3D();
 
@@ -502,9 +538,7 @@ fn main() {
 
             EndDrawing();
 
-            WaitTime(cli.slowdown);
-
-            WindowShouldClose()
+            Suggestions::new(WindowShouldClose(), timer.finished()) //Slow
         };
 
         swarm.register_insight(draw_ui);
@@ -519,5 +553,21 @@ fn main() {
         UnloadModel(heightmap_model);
 
         CloseWindow();
+    }
+}
+
+unsafe fn draw_particles_skip_best(
+    particles: &Vec<Particle>,
+    best_index: usize,
+    problem: &FnProblem<RangeInclusive<f64>>,
+    func: &FnBench<RangeInclusive<f64>>,
+) {
+    let mut i = 0;
+    for p in particles {
+        if i == best_index {
+            continue;
+        }
+        draw_particle(p, &problem, func, BLUE);
+        i += 1;
     }
 }

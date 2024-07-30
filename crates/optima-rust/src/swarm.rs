@@ -18,7 +18,19 @@ use crate::{
     },
 };
 
-pub type SwarmInsightFn = dyn FnMut(&FnProblem<RangeInclusive<f64>>, &Vec<Particle>, usize, bool) -> bool;
+pub struct Suggestions {
+    pub end: bool,
+    pub simulate: bool,
+}
+
+impl Suggestions {
+    pub fn new(end: bool, simulate: bool) -> Self {
+        Self { end, simulate }
+    }
+}
+
+pub type SwarmInsightFn =
+    dyn FnMut(&FnProblem<RangeInclusive<f64>>, &Vec<Particle>, usize, bool) -> Suggestions; //Slow
 
 pub fn min_value_of_range<R, T>(range: &R) -> Option<T>
 where
@@ -122,6 +134,16 @@ impl FnProblem<RangeInclusive<f64>> {
 
 impl<R: RangeBounds<f64>> Problem for FnProblem<R> {}
 
+struct OptParams {
+    skip_simulation: bool,
+}
+
+impl OptParams {
+    fn new(skip_simulation: bool) -> Self {
+        Self { skip_simulation }
+    }
+}
+
 pub struct ParticleSwarm<'a, SC: StopCriteria> {
     pub particles: Vec<Particle>,
     best_global_index: usize,
@@ -216,6 +238,57 @@ where
             }
         }
     }
+
+    fn simulate(
+        &mut self,
+        problem: &FnProblem<RangeInclusive<f64>>,
+        criterion: &mut Criterion<FnProblem<RangeInclusive<f64>>, Particle>,
+    ) {
+        for i in 0..self.particles.len() {
+            //Pick random parameters r_i and r_g
+            let r_local: f64 = self.rng.gen();
+            let r_global: f64 = self.rng.gen();
+
+            //Update x velocity
+            let particle = &self.particles[i];
+            let best_local = &self.particles[particle.best_local_index];
+            let best_global = &self.particles[self.best_global_index];
+            let local = self.local_attraction * r_local * (best_local.x - particle.x);
+            let global = self.global_attraction * r_global * (best_global.x - particle.x);
+            let particle = &mut self.particles[i];
+            particle.velocity_x = self.inertia * particle.velocity_x + local + global;
+
+            //Update y velocity
+            let particle = &self.particles[i];
+            let best_local = &self.particles[particle.best_local_index];
+            let best_global = &self.particles[self.best_global_index];
+            let local = self.local_attraction * r_local * (best_local.y - particle.y);
+            let global = self.global_attraction * r_global * (best_global.y - particle.y);
+            let particle = &mut self.particles[i];
+            particle.velocity_y = self.inertia * particle.velocity_y + local + global;
+
+            //Update position in search space according to velocity
+            particle.update_position(problem);
+
+            criterion.evaluate(problem, particle);
+
+            let particle = &self.particles[i];
+
+            let best_local_index = particle.best_local_index;
+            let is_local_better = self.is_better(i, best_local_index, criterion.is_minimization);
+
+            let is_this_better =
+                self.is_better(i, self.best_global_index, criterion.is_minimization);
+
+            let particle = &mut self.particles[i];
+            if is_local_better {
+                particle.best_local_index = i;
+            }
+            if is_this_better {
+                self.best_global_index = i;
+            }
+        }
+    }
 }
 
 impl<'a, SC> OptAlgorithm<'a, FnProblem<RangeInclusive<f64>>, Particle> for ParticleSwarm<'a, SC>
@@ -231,59 +304,31 @@ where
         self.initialize(&problem, criterion);
 
         let best_value = self.particles[self.best_global_index].get_value();
-        while !self.stop_criteria.should_stop(best_value) {
-            for i in 0..self.particles.len() {
-                //Pick random parameters r_i and r_g
-                let r_local: f64 = self.rng.gen();
-                let r_global: f64 = self.rng.gen();
 
-                //Update x velocity
-                let particle = &self.particles[i];
-                let best_local = &self.particles[particle.best_local_index];
-                let best_global = &self.particles[self.best_global_index];
-                let local = self.local_attraction * r_local * (best_local.x - particle.x);
-                let global = self.global_attraction * r_global * (best_global.x - particle.x);
-                let particle = &mut self.particles[i];
-                particle.velocity_x = self.inertia * particle.velocity_x + local + global;
+        let mut skip_simulation = false;
 
-                //Update y velocity
-                let particle = &self.particles[i];
-                let best_local = &self.particles[particle.best_local_index];
-                let best_global = &self.particles[self.best_global_index];
-                let local = self.local_attraction * r_local * (best_local.y - particle.y);
-                let global = self.global_attraction * r_global * (best_global.y - particle.y);
-                let particle = &mut self.particles[i];
-                particle.velocity_y = self.inertia * particle.velocity_y + local + global;
-
-                //Update position in search space according to velocity
-                particle.update_position(&problem);
-
-                criterion.evaluate(&problem, particle);
-
-                let particle = &self.particles[i];
-
-                let best_local_index = particle.best_local_index;
-                let is_local_better =
-                    self.is_better(i, best_local_index, criterion.is_minimization);
-
-                let is_this_better =
-                    self.is_better(i, self.best_global_index, criterion.is_minimization);
-
-                let particle = &mut self.particles[i];
-                if is_local_better {
-                    particle.best_local_index = i;
-                }
-                if is_this_better {
-                    self.best_global_index = i;
-                }
+        while !self.stop_criteria.should_stop() {
+            if !skip_simulation {
+                self.simulate(&problem, criterion);
+                self.stop_criteria.update(best_value);
             }
 
-            let should_stop = match &mut self.insight {
-                Some(f) => f(&problem, &self.particles, self.best_global_index, false),
-                _ => false,
+            let suggestions = match &mut self.insight {
+                Some(f) => {
+                    let x = f(&problem, &self.particles, self.best_global_index, false);
+                    Some(x)
+                }
+                _ => None,
             };
 
-            if should_stop {
+            if suggestions.is_none() {
+                continue;
+            }
+
+            let suggestions = suggestions.unwrap();
+            skip_simulation = !suggestions.simulate;
+
+            if suggestions.end {
                 break;
             }
         }

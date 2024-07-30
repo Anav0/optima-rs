@@ -1,7 +1,8 @@
 use std::fmt::Display;
 
 pub trait StopCriteria: Clone + Display {
-    fn should_stop(&mut self, value: f64) -> bool;
+    fn should_stop(&self) -> bool;
+    fn update(&mut self, value: f64);
     fn reset(&mut self);
 }
 #[derive(Clone, Copy)]
@@ -23,16 +24,20 @@ impl Display for MaxSteps {
     }
 }
 impl StopCriteria for MaxSteps {
-    fn should_stop(&mut self, _value: f64) -> bool {
+    fn should_stop(&self) -> bool {
         if self.steps > self.max_steps {
             return true;
         }
-        self.steps += 1;
+
         false
     }
 
     fn reset(&mut self) {
         self.steps = 0;
+    }
+
+    fn update(&mut self, _value: f64) {
+        self.steps += 1;
     }
 }
 
@@ -71,21 +76,10 @@ impl Display for NotGettingBetter {
     }
 }
 impl StopCriteria for NotGettingBetter {
-    fn should_stop(&mut self, value: f64) -> bool {
-        self.steps += 1;
+    fn should_stop(&self) -> bool {
         if self.steps > self.max_steps {
             return true;
         };
-
-        let is_better = match self.is_minimization {
-            true => value < self.best_value,
-            false => value > self.best_value,
-        };
-
-        if is_better {
-            self.best_value = value;
-            self.found_at = self.steps;
-        }
 
         if self.steps - self.found_at >= self.not_getting_better {
             return true;
@@ -102,6 +96,20 @@ impl StopCriteria for NotGettingBetter {
             false => f64::MIN,
         };
         self.best_value = best_value;
+    }
+
+    fn update(&mut self, value: f64) {
+        self.steps += 1;
+
+        let is_better = match self.is_minimization {
+            true => value < self.best_value,
+            false => value > self.best_value,
+        };
+
+        if is_better {
+            self.best_value = value;
+            self.found_at = self.steps;
+        }
     }
 }
 
@@ -120,7 +128,8 @@ mod tests {
         let mut counter = 0;
         let mut value = 0.0;
 
-        while !should_stop.should_stop(value) {
+        should_stop.update(value);
+        while !should_stop.should_stop() {
             value += 1.0;
             counter += 1;
         }
@@ -137,7 +146,8 @@ mod tests {
         let mut counter = 0;
         let value = 0.0;
 
-        while !should_stop.should_stop(value) {
+        should_stop.update(value);
+        while !should_stop.should_stop() {
             counter += 1;
         }
 
@@ -151,7 +161,8 @@ mod tests {
 
         let mut value = 0.0;
 
-        while !should_stop.should_stop(value) {
+        should_stop.update(value);
+        while !should_stop.should_stop() {
             value += 1.0;
         }
 

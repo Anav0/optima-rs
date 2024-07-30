@@ -45,11 +45,7 @@ where
         self.insight = Some(insight);
     }
 
-    fn hot_enough_to_swap(
-        &mut self,
-        current_value: f64,
-        before_move: f64,
-    ) -> bool {
+    fn hot_enough_to_swap(&mut self, current_value: f64, before_move: f64) -> bool {
         let diff = current_value - before_move;
         if diff == 0.0 {
             return false;
@@ -83,7 +79,7 @@ where
 
         //Main loop
         let mut counter = 0;
-        while !self.stop_criteria.should_stop(solution.get_value()) {
+        while !self.stop_criteria.should_stop() {
             //Save current state and then change and evaluate it
             let before = solution.clone();
             (change)(&mut solution, &problem, &mut self.rnd);
@@ -91,10 +87,8 @@ where
 
             let best_eval = best.get_eval();
 
-            let hot_enough = self.hot_enough_to_swap(
-                solution.get_eval().value,
-                before.get_eval().value,
-            );
+            let hot_enough =
+                self.hot_enough_to_swap(solution.get_eval().value, before.get_eval().value);
 
             if criterion.is_first_better(solution.get_eval(), before.get_eval()) || hot_enough {
                 if criterion.is_first_better(solution.get_eval(), best_eval) {
@@ -109,6 +103,7 @@ where
             }
             counter += 1;
             self.cooler.cool();
+            self.stop_criteria.update(solution.get_value());
         }
 
         match &mut self.insight {
